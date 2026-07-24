@@ -1,0 +1,37 @@
+{
+  "name": "Visitor",
+  "type": "object",
+  "properties": {
+    "visitor_id": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "country": {
+      "type": "string"
+    },
+    "browser": {
+      "type": "string"
+    },
+    "device": {
+      "type": "string"
+    },
+    "os": {
+      "type": "string"
+    },
+    "visitor_ip": {
+      "type": "string"
+    },
+    "visit_count": {
+      "type": "number",
+      "default": 1
+    }
+  },
+  "required": [
+    "visitor_id"
+  ]
+}

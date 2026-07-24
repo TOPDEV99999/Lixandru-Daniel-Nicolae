@@ -1,0 +1,98 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Generator for Prisma Client
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+// SQLite database configuration
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User model for authentication (enhanced from Base44 User entity)
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  name         String?
+  role         String    @default("user") // "admin" or "user"
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  
+  // Relations 
+  contactMessages ContactMessage[]
+  meetingRequests MeetingRequest[]
+  
+  @@map("users")
+}
+
+// ContactMessage model (converted from Base44 ContactMessage entity)
+model ContactMessage {
+  id         String   @id @default(cuid())
+  fullName   String   @map("full_name")
+  email      String
+  message    String
+  visitorIp  String?  @map("visitor_ip")
+  browser    String?
+  country    String?
+  status     String   @default("new") // "new", "read", "archived"
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  userId String?  @map("user_id")
+  user   User?    @relation(fields: [userId], references: [id])
+  
+  @@map("contact_messages")
+}
+
+// MeetingRequest model (converted from Base44 MeetingRequest entity)
+model MeetingRequest {
+  id             String   @id @default(cuid())
+  customerName   String   @map("customer_name")
+  email          String
+  company        String?
+  meetingTopic   String   @map("meeting_topic")
+  requestedDate  String   @map("requested_date") // Using String for date format flexibility
+  requestedTime  String   @map("requested_time")
+  notes          String?
+  visitorIp      String?  @map("visitor_ip")
+  browser        String?
+  country        String?
+  status         String   @default("pending") // "pending", "accepted", "rejected", "completed"
+  acceptedDate   String?  @map("accepted_date")
+  acceptedTime   String?  @map("accepted_time")
+  meetLink       String?  @map("meet_link")
+  adminMessage   String?  @map("admin_message")
+  adminNotes     String?  @map("admin_notes")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  userId String?  @map("user_id")
+  user   User?    @relation(fields: [userId], references: [id])
+  
+  @@map("meeting_requests")
+}
+
+// Visitor model (converted from Base44 Visitor entity)
+model Visitor {
+  id         String   @id @default(cuid())
+  visitorId  String   @unique @map("visitor_id")
+  email      String?
+  name       String?
+  country    String?
+  browser    String?
+  device     String?
+  os         String?
+  visitorIp  String?  @map("visitor_ip")
+  visitCount Int      @default(1) @map("visit_count")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  
+  @@map("visitors")
+}

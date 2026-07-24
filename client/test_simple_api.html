@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple API Test</title>
+    <script>
+        async function testAPI() {
+            console.log('Testing API call...');
+            
+            // Test data matching what frontend sends
+            const formData = {
+                full_name: "Test User",
+                email: "test@example.com",
+                message: "Test message"
+            };
+            
+            try {
+                console.log('1. Making direct fetch to /api/contact...');
+                const response = await fetch('http://localhost:3001/api/contact', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                
+                console.log('2. Response status:', response.status, response.statusText);
+                const data = await response.json();
+                console.log('3. Response data:', data);
+                
+                // Check if response has the expected format
+                if (data.success) {
+                    console.log('✅ Direct API call SUCCESS!');
+                    console.log('Response format:', {
+                        success: data.success,
+                        id: data.id,
+                        emailSent: data.emailSent
+                    });
+                } else {
+                    console.log('❌ Direct API call failed - success is false');
+                }
+                
+            } catch (error) {
+                console.log('❌ Direct API call ERROR:', error.message);
+                console.log('Error details:', error);
+            }
+        }
+        
+        async function testBase44Format() {
+            console.log('\n--- Testing Base44 response format ---');
+            
+            const formData = {
+                full_name: "Test User",
+                email: "test@example.com",
+                message: "Test message"
+            };
+            
+            try {
+                // Simulate what base44Compatibility.js does
+                console.log('1. Simulating db.functions.invoke call...');
+                
+                // First call local API (what base44Compatibility.js does)
+                const apiResponse = await fetch('http://localhost:3001/api/contact', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                
+                const apiData = await apiResponse.json();
+                console.log('2. API response:', apiData);
+                
+                // Wrap in Base44 format (what base44Compatibility.js does)
+                const base44Response = {
+                    data: apiData,
+                    error: null,
+                    success: true
+                };
+                
+                console.log('3. Base44 wrapped response:', base44Response);
+                
+                // Check if frontend would accept this
+                if (base44Response.data && base44Response.data.success) {
+                    console.log('✅ Base44 format check PASSED!');
+                    console.log('response.data.success =', base44Response.data.success);
+                } else {
+                    console.log('❌ Base44 format check FAILED');
+                    console.log('response.data.success =', base44Response.data?.success);
+                }
+                
+            } catch (error) {
+                console.log('❌ Error testing Base44 format:', error.message);
+            }
+        }
+        
+        // Run tests when page loads
+        window.onload = function() {
+            console.log('=== Simple API Test ===');
+            console.log('Backend URL: http://localhost:3001');
+            console.log('Testing in 1 second...');
+            setTimeout(() => {
+                testAPI();
+                setTimeout(testBase44Format, 1000);
+            }, 1000);
+        };
+    </script>
+</head>
+<body>
+    <h1>Simple API Test</h1>
+    <p>Open browser console (F12) to see test results.</p>
+    <button onclick="testAPI()">Test Direct API</button>
+    <button onclick="testBase44Format()">Test Base44 Format</button>
+</body>
+</html>

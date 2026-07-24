@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script>self["MonacoEnvironment"] = (function (paths) {
+          return {
+            globalAPI: false,
+            getWorkerUrl : function (moduleId, label) {
+              var result =  paths[label];
+              if (/^((http:)|(https:)|(file:)|(\/\/))/.test(result)) {
+                var currentUrl = String(window.location);
+                var currentOrigin = currentUrl.substr(0, currentUrl.length - window.location.hash.length - window.location.search.length - window.location.pathname.length);
+                if (result.substring(0, currentOrigin.length) !== currentOrigin) {
+                  var js = '/*' + label + '*/importScripts("' + result + '");';
+                  var blob = new Blob([js], { type: 'application/javascript' });
+                  return URL.createObjectURL(blob);
+                }
+              }
+              return result;
+            }
+          };
+        })({
+  "editorWorkerService": "/monacoeditorwork/editor.worker.bundle.js",
+  "typescript": "/monacoeditorwork/ts.worker.bundle.js",
+  "json": "/monacoeditorwork/json.worker.bundle.js",
+  "css": "/monacoeditorwork/css.worker.bundle.js",
+  "html": "/monacoeditorwork/html.worker.bundle.js",
+  "javascript": "/monacoeditorwork/ts.worker.bundle.js",
+  "less": "/monacoeditorwork/css.worker.bundle.js",
+  "scss": "/monacoeditorwork/css.worker.bundle.js",
+  "handlebars": "/monacoeditorwork/html.worker.bundle.js",
+  "razor": "/monacoeditorwork/html.worker.bundle.js"
+});</script>
+
+    <!-- Runtime config — must load before Vite injects module scripts into <head> -->
+    <script src="/api/frontend-config.js"></script>
+    <!-- Usercentrics CMP -->
+    <script type="application/javascript">
+      var isBypassEnabled = document.cookie.split(';').some(function(cookie) {
+        return cookie.trim().indexOf('no_cmp=') === 0;
+      });
+      var UC_UI_SUPPRESS_CMP_DISPLAY = isBypassEnabled;
+    </script>
+    <script src="https://accounts.google.com/gsi/client" async></script>
+    <meta charset="utf-8" />
+    <link rel="icon" href="/logo_v3.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="Build useful apps, fast with Base44."
+    />
+
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Base44">
+    <link rel="apple-touch-icon" href="/logo_v3.png">
+    <link rel="manifest" href="/manifest.json" />
+    <title>Base44</title>
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://app.base44.com" />
+    <meta property="og:title" content="Base44" />
+    <meta property="og:site_name" content="Base44" />
+    <meta property="og:description" content="Build useful apps, fast with Base44." />
+    <meta property="og:image" content="https://app.base44.com/link_preview_v3.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Base44 link preview" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://app.base44.com" />
+    <meta name="twitter:title" content="Base44" />
+    <meta name="twitter:description" content="Build useful apps, fast with Base44." />
+    <meta name="twitter:image" content="https://app.base44.com/link_preview_v3.png" />
+    <meta name="twitter:image:alt" content="Base44 link preview" />
+    <script type="module" crossorigin src="/static/index-Bdewg20n.js"></script>
+    <link rel="modulepreload" crossorigin href="/static/rolldown-runtime-CMxvf4Kt.js">
+    <link rel="modulepreload" crossorigin href="/static/preload-helper-zJ_50EbN.js">
+    <link rel="modulepreload" crossorigin href="/static/runtime-QtgwY_nV.js">
+    <link rel="modulepreload" crossorigin href="/static/backend-BCNQUiWB.js">
+    <link rel="modulepreload" crossorigin href="/static/errorReporting-BXXdRIPB.js">
+    <link rel="modulepreload" crossorigin href="/static/vendor-react-CUzCXWdl.js">
+    <link rel="modulepreload" crossorigin href="/static/vendor-data-DOy00xue.js">
+    <link rel="modulepreload" crossorigin href="/static/vendor-utils-D1gCJUP_.js">
+    <link rel="modulepreload" crossorigin href="/static/axiosClient-B_OkJc10.js">
+    <link rel="modulepreload" crossorigin href="/static/base-De3DZ9d-.js">
+    <link rel="modulepreload" crossorigin href="/static/AuthAPI-CZkYMq5q.js">
+    <link rel="modulepreload" crossorigin href="/static/domainValidation-CAUmOOcC.js">
+    <link rel="modulepreload" crossorigin href="/static/useDesignSystem-viWPPSlk.js">
+    <link rel="modulepreload" crossorigin href="/static/AuthContext-lxhRXRE5.js">
+    <link rel="modulepreload" crossorigin href="/static/useNativeMobileBridge-Brv-Hbb_.js">
+    <link rel="modulepreload" crossorigin href="/static/native-mobile-app-fiOBHHYz.js">
+    <link rel="modulepreload" crossorigin href="/static/WorkspaceContext-d5dnIaDq.js">
+    <link rel="modulepreload" crossorigin href="/static/prop-types-CZe_Cxea.js">
+    <link rel="modulepreload" crossorigin href="/static/use-mobile-Bbf_bz9d.js">
+    <link rel="modulepreload" crossorigin href="/static/usePlatform-CfPMTP01.js">
+    <link rel="modulepreload" crossorigin href="/static/actions.middleware-CKYiRiUm.js">
+    <link rel="modulepreload" crossorigin href="/static/persist-to-storage-DzFO5UjV.js">
+    <link rel="modulepreload" crossorigin href="/static/react-CUw926gE.js">
+    <link rel="modulepreload" crossorigin href="/static/useAnalyticsConsent-BZNNhx5c.js">
+    <link rel="modulepreload" crossorigin href="/static/vendor-ui-DI60GTJC.js">
+    <link rel="stylesheet" crossorigin href="/static/index-BRBvprjr.css">
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+  </body>
+</html>

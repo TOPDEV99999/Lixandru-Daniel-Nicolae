@@ -1,0 +1,69 @@
+{
+  "name": "MeetingRequest",
+  "type": "object",
+  "properties": {
+    "customer_name": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "company": {
+      "type": "string"
+    },
+    "meeting_topic": {
+      "type": "string"
+    },
+    "requested_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "requested_time": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "visitor_ip": {
+      "type": "string"
+    },
+    "browser": {
+      "type": "string"
+    },
+    "country": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "accepted",
+        "rejected",
+        "completed"
+      ],
+      "default": "pending"
+    },
+    "accepted_date": {
+      "type": "string"
+    },
+    "accepted_time": {
+      "type": "string"
+    },
+    "meet_link": {
+      "type": "string"
+    },
+    "admin_message": {
+      "type": "string"
+    },
+    "admin_notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "customer_name",
+    "email",
+    "meeting_topic",
+    "requested_date",
+    "requested_time"
+  ]
+}

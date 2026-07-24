@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Connection Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+        .success { background: #d4edda; }
+        .error { background: #f8d7da; }
+        button { padding: 8px 16px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Frontend-Backend Connection Test</h1>
+    <p>Frontend: <a href="http://localhost:5173" target="_blank">http://localhost:5173</a></p>
+    <p>Backend: <a href="http://localhost:3001" target="_blank">http://localhost:3001</a></p>
+    
+    <div class="test">
+        <h3>Test 1: Backend Health Check</h3>
+        <button onclick="testHealth()">Test Health Endpoint</button>
+        <div id="healthResult"></div>
+    </div>
+    
+    <div class="test">
+        <h3>Test 2: Contact Form Submission</h3>
+        <button onclick="testContact()">Test Contact API</button>
+        <div id="contactResult"></div>
+    </div>
+    
+    <div class="test">
+        <h3>Test 3: Meeting Submission</h3>
+        <button onclick="testMeeting()">Test Meeting API</button>
+        <div id="meetingResult"></div>
+    </div>
+    
+    <div class="test">
+        <h3>Test 4: Base44 Function Compatibility</h3>
+        <button onclick="testBase44Function('submitContact')">Test submitContact Function</button>
+        <button onclick="testBase44Function('getAvailability')">Test getAvailability Function</button>
+        <div id="functionResult"></div>
+    </div>
+    
+    <script>
+        function showResult(elementId, message, isSuccess) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<pre>${message}</pre>`;
+            element.className = isSuccess ? 'success' : 'error';
+        }
+        
+        async function testHealth() {
+            try {
+                const response = await fetch('http://localhost:3001/health');
+                const data = await response.json();
+                showResult('healthResult', 
+                    `✅ Success!\nStatus: ${response.status}\nResponse: ${JSON.stringify(data, null, 2)}`, 
+                    true);
+            } catch (error) {
+                showResult('healthResult', 
+                    `❌ Error: ${error.message}\nMake sure backend is running on port 3001`, 
+                    false);
+            }
+        }
+        
+        async function testContact() {
+            try {
+                const contactData = {
+                    fullName: "Test User",
+                    email: "test@example.com",
+                    message: "This is a test contact message from the connection test.",
+                    visitorIp: "127.0.0.1",
+                    browser: "Test Browser",
+                    country: "Test Country"
+                };
+                
+                const response = await fetch('http://localhost:3001/api/contact', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(contactData)
+                });
+                
+                const data = await response.json();
+                showResult('contactResult', 
+                    `✅ Contact API Working!\nStatus: ${response.status}\nResponse: ${JSON.stringify(data, null, 2)}`, 
+                    true);
+            } catch (error) {
+                showResult('contactResult', 
+                    `❌ Contact API Error: ${error.message}\nCheck CORS configuration and backend routes`, 
+                    false);
+            }
+        }
+        
+        async function testMeeting() {
+            try {
+                const meetingData = {
+                    customerName: "Test Customer",
+                    email: "customer@example.com",
+                    company: "Test Company",
+                    meetingTopic: "Project Discussion",
+                    requestedDate: "2024-12-15",
+                    requestedTime: "14:30",
+                    notes: "Test meeting request"
+                };
+                
+                const response = await fetch('http://localhost:3001/api/meeting', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(meetingData)
+                });
+                
+                const data = await response.json();
+                showResult('meetingResult', 
+                    `✅ Meeting API Working!\nStatus: ${response.status}\nResponse: ${JSON.stringify(data, null, 2)}`, 
+                    true);
+            } catch (error) {
+                showResult('meetingResult', 
+                    `❌ Meeting API Error: ${error.message}`, 
+                    false);
+            }
+        }
+        
+        async function testBase44Function(functionName) {
+            try {
+                const testData = functionName === 'getAvailability' 
+                    ? { date: '2024-12-15' }
+                    : functionName === 'submitContact'
+                    ? { fullName: "Test", email: "test@example.com", message: "Test message" }
+                    : {};
+                
+                const response = await fetch(`http://localhost:3001/api/functions/${functionName}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(testData)
+                });
+                
+                const data = await response.json();
+                showResult('functionResult', 
+                    `✅ Base44 ${functionName} Function Working!\nStatus: ${response.status}\nResponse: ${JSON.stringify(data, null, 2)}`, 
+                    true);
+            } catch (error) {
+                showResult('functionResult', 
+                    `❌ Base44 ${functionName} Function Error: ${error.message}`, 
+                    false);
+            }
+        }
+        
+        // Auto-test health endpoint on page load
+        setTimeout(() => testHealth(), 500);
+    </script>
+</body>
+</html>
