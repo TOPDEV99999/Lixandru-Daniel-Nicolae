@@ -11,12 +11,12 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
-app.use(cors());
-// app.use(cors({
-//   origin: ['http://localhost:3000', 'http://localhost:5173'],
-//   credentials: true,
-//   optionsSuccessStatus: 200
-// }));
+// app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:5173'],
+  credentials: true,
+  optionsSuccessStatus: 200
+}));
 app.use(helmet());
 app.use(morgan('dev'));
 app.use(express.json());
