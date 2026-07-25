@@ -26,7 +26,7 @@ const authMiddleware = (requiredRole) => {
             }
             // Attach user to request
             req.user = decoded;
-            next();
+            return next();
         }
         catch (error) {
             if (error instanceof jsonwebtoken_1.default.JsonWebTokenError) {
@@ -41,7 +41,7 @@ const authMiddleware = (requiredRole) => {
     };
 };
 exports.authMiddleware = authMiddleware;
-const optionalAuthMiddleware = (req, res, next) => {
+const optionalAuthMiddleware = (req, _res, next) => {
     try {
         const authHeader = req.headers.authorization;
         if (authHeader && authHeader.startsWith('Bearer ')) {

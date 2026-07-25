@@ -8,12 +8,10 @@ const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
 const morgan_1 = __importDefault(require("morgan"));
 const dotenv_1 = __importDefault(require("dotenv"));
-const http_1 = require("http");
 const routes_1 = require("./routes");
 // Load environment variables
 dotenv_1.default.config();
 const app = (0, express_1.default)();
-const server = (0, http_1.createServer)(app);
 const PORT = process.env.PORT || 3001;
 // Configure CORS to allow frontend requests
 const corsOptions = {
@@ -30,7 +28,7 @@ app.use((0, morgan_1.default)('dev'));
 app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: true }));
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
     res.json({
         status: 'ok',
         timestamp: new Date().toISOString(),
@@ -39,7 +37,7 @@ app.get('/health', (req, res) => {
     });
 });
 // Basic route for testing
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
     res.json({
         message: 'Local Backend APIas',
         version: '1.0.0',
@@ -58,7 +56,7 @@ app.get('/', (req, res) => {
 // Setup all API routes
 (0, routes_1.setupRoutes)(app);
 // Error handling middleware
-app.use((err, req, res, next) => {
+app.use((err, _req, res, _next) => {
     console.error('Unhandled error:', err);
     res.status(500).json({
         error: 'Internal Server Error',
@@ -66,10 +64,10 @@ app.use((err, req, res, next) => {
     });
 });
 // 404 handler
-app.use((req, res) => {
+app.use((_req, res) => {
     res.status(404).json({
         error: 'Not Found',
-        message: `Cannot ${req.method} ${req.path}`
+        message: `Cannot ${_req.method} ${_req.path}`
     });
 });
 // Start server

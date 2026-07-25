@@ -54,7 +54,7 @@ class AdminController {
                 overview: {
                     totalRecords: visitors.length + meetings.length + messages.length,
                     growthRate: this.calculateGrowthRate(visitors, meetings, messages),
-                    engagementRate: this.calculateEngagementRate(visitors, meetings, messages)
+                    engagementRate: this.calculateEngagementRate(visitors)
                 }
             };
             // Get recent records for display
@@ -94,7 +94,8 @@ class AdminController {
                 return res.status(403).json({ error: 'Admin access required' });
             }
             const { period = '30d' } = req.query;
-            const days = this.parsePeriod(period);
+            const periodStr = (Array.isArray(period) ? period[0] || '30d' : period);
+            const days = this.parsePeriod(periodStr);
             const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
             const visitors = await this.visitorRepository.findAll();
             const meetings = await this.meetingRepository.findAll();
@@ -213,7 +214,7 @@ class AdminController {
         const totalPrevious = totalCurrent * 0.9; // Placeholder for previous period
         return totalPrevious > 0 ? Math.round(((totalCurrent - totalPrevious) / totalPrevious) * 100) : 100;
     }
-    calculateEngagementRate(visitors, meetings, messages) {
+    calculateEngagementRate(visitors) {
         const engagedVisitors = visitors.filter(v => v.visitCount > 1).length;
         return visitors.length > 0 ? Math.round((engagedVisitors / visitors.length) * 100) : 0;
     }

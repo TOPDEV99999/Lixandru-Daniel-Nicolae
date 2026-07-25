@@ -32,7 +32,7 @@ export const authMiddleware = (requiredRole?: string) => {
 
       // Attach user to request
       req.user = decoded;
-      next();
+      return next();
     } catch (error) {
       if (error instanceof jwt.JsonWebTokenError) {
         return res.status(401).json({ error: 'Invalid token' });
@@ -47,7 +47,7 @@ export const authMiddleware = (requiredRole?: string) => {
   };
 };
 
-export const optionalAuthMiddleware = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+export const optionalAuthMiddleware = (req: AuthenticatedRequest, _res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization;
     

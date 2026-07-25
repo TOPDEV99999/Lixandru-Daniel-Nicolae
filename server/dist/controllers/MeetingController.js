@@ -68,7 +68,7 @@ class MeetingController {
             if (!validationResult.success) {
                 return res.status(400).json({
                     error: 'Validation failed',
-                    details: validationResult.error.errors.map(err => ({
+                    details: validationResult.error.issues.map(err => ({
                         field: err.path.join('.'),
                         message: err.message
                     }))
@@ -119,7 +119,7 @@ class MeetingController {
                 notes: cleanNotes,
                 visitorIp: clientIp,
                 browser: detectedBrowser,
-                country: detectedCountry,
+                country: Array.isArray(detectedCountry) ? detectedCountry[0] : detectedCountry,
                 userId: user?.userId || userId
             };
             // Create meeting request
@@ -131,7 +131,7 @@ class MeetingController {
                 await this.visitorRepository.update(existingVisitor.id, {
                     email: cleanEmail,
                     name: cleanCustomerName,
-                    country: detectedCountry,
+                    country: Array.isArray(detectedCountry) ? detectedCountry[0] : detectedCountry,
                     browser: detectedBrowser,
                     device,
                     os,
@@ -144,7 +144,7 @@ class MeetingController {
                     visitorId,
                     email: cleanEmail,
                     name: cleanCustomerName,
-                    country: detectedCountry,
+                    country: Array.isArray(detectedCountry) ? detectedCountry[0] : detectedCountry,
                     browser: detectedBrowser,
                     device,
                     os,
@@ -235,7 +235,8 @@ class MeetingController {
                 return res.status(401).json({ error: 'Not authenticated' });
             }
             const { id } = req.params;
-            const meeting = await this.meetingRepository.findById(id);
+            const idStr = Array.isArray(id) ? id[0] : id;
+            const meeting = await this.meetingRepository.findById(idStr);
             if (!meeting) {
                 return res.status(404).json({ error: 'Meeting request not found' });
             }
@@ -256,12 +257,13 @@ class MeetingController {
                 return res.status(403).json({ error: 'Admin access required' });
             }
             const { id } = req.params;
+            const idStr = Array.isArray(id) ? id[0] : id;
             // Validate input
             const validationResult = meetingValidation_1.meetingResponseSchema.safeParse(req.body);
             if (!validationResult.success) {
                 return res.status(400).json({
                     error: 'Validation failed',
-                    details: validationResult.error.errors.map(err => ({
+                    details: validationResult.error.issues.map(err => ({
                         field: err.path.join('.'),
                         message: err.message
                     }))
@@ -269,7 +271,7 @@ class MeetingController {
             }
             const responseData = validationResult.data;
             const { status, acceptedDate, acceptedTime, meetLink, adminMessage } = responseData;
-            const meeting = await this.meetingRepository.findById(id);
+            const meeting = await this.meetingRepository.findById(idStr);
             if (!meeting) {
                 return res.status(404).json({ error: 'Meeting request not found' });
             }
@@ -283,7 +285,7 @@ class MeetingController {
                 updateData.acceptedTime = acceptedTime || meeting.requestedTime;
                 updateData.meetLink = meetLink;
             }
-            const updatedMeeting = await this.meetingRepository.update(id, updateData);
+            const updatedMeeting = await this.meetingRepository.update(idStr, updateData);
             if (!updatedMeeting) {
                 return res.status(404).json({ error: 'Meeting request not found' });
             }
@@ -304,7 +306,8 @@ class MeetingController {
                 return res.status(401).json({ error: 'Not authenticated' });
             }
             const { id } = req.params;
-            const meeting = await this.meetingRepository.findById(id);
+            const idStr = Array.isArray(id) ? id[0] : id;
+            const meeting = await this.meetingRepository.findById(idStr);
             if (!meeting) {
                 return res.status(404).json({ error: 'Meeting request not found' });
             }
@@ -317,7 +320,7 @@ class MeetingController {
             if (!validationResult.success) {
                 return res.status(400).json({
                     error: 'Validation failed',
-                    details: validationResult.error.errors.map(err => ({
+                    details: validationResult.error.issues.map(err => ({
                         field: err.path.join('.'),
                         message: err.message
                     }))
@@ -334,7 +337,7 @@ class MeetingController {
                 delete updateData.adminMessage;
                 delete updateData.adminNotes;
             }
-            const updatedMeeting = await this.meetingRepository.update(id, updateData);
+            const updatedMeeting = await this.meetingRepository.update(idStr, updateData);
             if (!updatedMeeting) {
                 return res.status(404).json({ error: 'Meeting request not found' });
             }
@@ -354,7 +357,8 @@ class MeetingController {
                 return res.status(403).json({ error: 'Admin access required' });
             }
             const { id } = req.params;
-            const deleted = await this.meetingRepository.delete(id);
+            const idStr = Array.isArray(id) ? id[0] : id;
+            const deleted = await this.meetingRepository.delete(idStr);
             if (!deleted) {
                 return res.status(404).json({ error: 'Meeting request not found' });
             }

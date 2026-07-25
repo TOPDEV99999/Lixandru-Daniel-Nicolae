@@ -34,7 +34,7 @@ export interface MeetingRequestEmailData {
 
 export class EmailService {
   private recipientEmail = 'uhajucewog80@gmail.com';
-  private enabled = process.env.EMAIL_ENABLED === 'true';
+  // private enabled = process.env.EMAIL_ENABLED === 'true'; // Unused property
 
   /**
    * Send an email using Nodemailer with Gmail

@@ -22,7 +22,7 @@ export function setupRoutes(app: Express) {
     });
   });
   
-  app.post('/api/auth/refresh', (req, res) => {
+  app.post('/api/auth/refresh', (_req, res) => {
     res.json({ 
       message: 'Token refresh endpoint',
       tokens: { accessToken: 'new-token', refreshToken: 'new-refresh' }
@@ -54,9 +54,9 @@ export function setupRoutes(app: Express) {
         fullName: req.body.full_name || req.body.fullName || 'Unknown',
         email: req.body.email || 'unknown@example.com',
         message: req.body.message || '',
-        visitorIp: req.headers['x-forwarded-for'] || req.ip,
+        visitorIp: Array.isArray(req.headers['x-forwarded-for']) ? req.headers['x-forwarded-for'][0] : req.headers['x-forwarded-for'] || req.ip,
         browser: req.headers['user-agent'] || 'Unknown',
-        country: req.headers['cf-ipcountry'] || 'Unknown'
+        country: Array.isArray(req.headers['cf-ipcountry']) ? req.headers['cf-ipcountry'][0] : req.headers['cf-ipcountry'] || 'Unknown'
       });
 
       res.status(201).json({ 
@@ -78,7 +78,7 @@ export function setupRoutes(app: Express) {
     }
   });
   
-  app.get('/api/contact', authMiddleware('admin'), (req, res) => {
+  app.get('/api/contact', authMiddleware('admin'), (_req, res) => {
     res.json({ 
       messages: [],
       pagination: { page: 1, limit: 20, total: 0, totalPages: 0 }
@@ -104,9 +104,9 @@ export function setupRoutes(app: Express) {
       // Send email notification
       const emailResult = await emailService.sendMeetingRequestNotification({
         ...meetingData,
-        visitorIp: req.headers['x-forwarded-for'] || req.ip,
+        visitorIp: Array.isArray(req.headers['x-forwarded-for']) ? req.headers['x-forwarded-for'][0] : req.headers['x-forwarded-for'] || req.ip,
         browser: req.headers['user-agent'] || 'Unknown',
-        country: req.headers['cf-ipcountry'] || 'Unknown'
+        country: Array.isArray(req.headers['cf-ipcountry']) ? req.headers['cf-ipcountry'][0] : req.headers['cf-ipcountry'] || 'Unknown'
       });
 
       res.status(201).json({ 
@@ -142,7 +142,7 @@ export function setupRoutes(app: Express) {
     }
   });
   
-  app.get('/api/meeting', authMiddleware(), (req, res) => {
+  app.get('/api/meeting', authMiddleware(), (_req, res) => {
     res.json({ 
       meetings: [],
       pagination: { page: 1, limit: 20, total: 0, totalPages: 0 }
@@ -173,7 +173,7 @@ export function setupRoutes(app: Express) {
   });
 
   // Visitor routes
-  app.post('/api/visit', (req, res) => {
+  app.post('/api/visit', (_req, res) => {
     console.log('Visitor tracked');
     res.status(201).json({ 
       success: true,
@@ -183,7 +183,7 @@ export function setupRoutes(app: Express) {
   });
 
   // Admin routes
-  app.get('/api/admin/data', authMiddleware('admin'), (req, res) => {
+  app.get('/api/admin/data', authMiddleware('admin'), (_req, res) => {
     res.json({ 
       statistics: {
         visitors: { total: 0, uniqueCountries: 0 },
@@ -198,7 +198,7 @@ export function setupRoutes(app: Express) {
   });
 
   // Email test endpoint (admin only)
-  app.post('/api/admin/test-email', authMiddleware('admin'), async (req, res) => {
+  app.post('/api/admin/test-email', authMiddleware('admin'), async (_req, res) => {
     try {
       const result = await emailService.sendTestEmail();
       res.json({
@@ -217,7 +217,7 @@ export function setupRoutes(app: Express) {
   });
 
   // Email configuration check endpoint
-  app.get('/api/admin/email-config', (req, res) => {
+  app.get('/api/admin/email-config', (_req, res) => {
     const config = {
       EMAIL_USER: process.env.EMAIL_USER ? 'Set (hidden)' : 'Not set',
       EMAIL_PASSWORD: process.env.EMAIL_PASSWORD ? 'Set (hidden)' : 'Not set',
@@ -234,7 +234,7 @@ export function setupRoutes(app: Express) {
   });
 
   // View saved email logs
-  app.get('/api/admin/email-logs', authMiddleware('admin'), (req, res) => {
+  app.get('/api/admin/email-logs', authMiddleware('admin'), (_req, res) => {
     try {
       const fs = require('fs');
       const path = require('path');
@@ -249,8 +249,8 @@ export function setupRoutes(app: Express) {
       }
       
       const files = fs.readdirSync(emailDir)
-        .filter(file => file.endsWith('.txt'))
-        .map(file => {
+        .filter((file: string) => file.endsWith('.txt'))
+        .map((file: string) => {
           const filepath = path.join(emailDir, file);
           const content = fs.readFileSync(filepath, 'utf8');
           const dateMatch = content.match(/Date: (.+)/);
@@ -266,9 +266,9 @@ export function setupRoutes(app: Express) {
             fullContent: content
           };
         })
-        .sort((a, b) => b.date.localeCompare(a.date)); // Newest first
+        .sort((a: any, b: any) => b.date.localeCompare(a.date)); // Newest first
       
-      res.json({
+      return res.json({
         success: true,
         emails: files,
         count: files.length,
@@ -277,7 +277,7 @@ export function setupRoutes(app: Express) {
       
     } catch (error: any) {
       console.error('Error reading email logs:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to read email logs',
         error: error.message
@@ -303,7 +303,7 @@ export function setupRoutes(app: Express) {
       
       const content = fs.readFileSync(filepath, 'utf8');
       
-      res.json({
+      return res.json({
         success: true,
         filename,
         content,
@@ -312,7 +312,7 @@ export function setupRoutes(app: Express) {
       
     } catch (error: any) {
       console.error('Error reading email log:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to read email log',
         error: error.message
@@ -321,7 +321,7 @@ export function setupRoutes(app: Express) {
   });
 
   // Resume download endpoint
-  app.get('/api/resume', (req, res) => {
+  app.get('/api/resume', (_req, res) => {
     const fs = require('fs');
     const path = require('path');
     
@@ -361,18 +361,18 @@ export function setupRoutes(app: Express) {
     
     try {
       const fileStream = fs.createReadStream(foundPath);
-      fileStream.pipe(res);
+      return fileStream.pipe(res);
       
-      fileStream.on('error', (error) => {
+      fileStream.on('error', (error: any) => {
         console.error('Error streaming resume file:', error);
-        res.status(500).json({ 
+        return res.status(500).json({ 
           error: 'Failed to download resume',
           message: error.message 
         });
       });
     } catch (error: any) {
       console.error('Error downloading resume:', error);
-      res.status(500).json({ 
+      return res.status(500).json({ 
         error: 'Failed to download resume',
         message: error.message 
       });
@@ -451,13 +451,13 @@ export function setupRoutes(app: Express) {
   });
 
   // Base44 SDK compatibility routes
-  app.get('/api/auth/isAuthenticated', authMiddleware(), (req, res) => {
+  app.get('/api/auth/isAuthenticated', authMiddleware(), (_req, res) => {
     res.json({ authenticated: true });
   });
 
   // Note: /api/auth/me is already defined above, so this duplicate is removed
 
-  app.post('/api/auth/logout', (req, res) => {
+  app.post('/api/auth/logout', (_req, res) => {
     // Clear token on client side
     res.json({ success: true, message: 'Logged out successfully' });
   });

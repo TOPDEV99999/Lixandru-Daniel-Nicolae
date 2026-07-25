@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { VisitorRepository } from '../repositories/VisitorRepository';
 import { MeetingRepository } from '../repositories/MeetingRepository';
 import { ContactRepository } from '../repositories/ContactRepository';
@@ -57,7 +57,7 @@ export class AdminController {
         overview: {
           totalRecords: visitors.length + meetings.length + messages.length,
           growthRate: this.calculateGrowthRate(visitors, meetings, messages),
-          engagementRate: this.calculateEngagementRate(visitors, meetings, messages)
+          engagementRate: this.calculateEngagementRate(visitors)
         }
       };
 
@@ -102,7 +102,8 @@ export class AdminController {
       }
 
       const { period = '30d' } = req.query;
-      const days = this.parsePeriod(period);
+      const periodStr = (Array.isArray(period) ? period[0] || '30d' : period) as string;
+      const days = this.parsePeriod(periodStr);
       const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
       const visitors = await this.visitorRepository.findAll();
@@ -156,7 +157,7 @@ export class AdminController {
 
   // Helper methods
 
-  private getTopItems(items: string[], limit: number = 10): Array<{ item: string; count: number }> {
+  private getTopItems(items: (string | null)[], limit: number = 10): Array<{ item: string; count: number }> {
     const counts: Record<string, number> = {};
     
     items.forEach(item => {
@@ -250,7 +251,7 @@ export class AdminController {
     return totalPrevious > 0 ? Math.round(((totalCurrent - totalPrevious) / totalPrevious) * 100) : 100;
   }
 
-  private calculateEngagementRate(visitors: any[], meetings: any[], messages: any[]): number {
+  private calculateEngagementRate(visitors: any[]): number {
     const engagedVisitors = visitors.filter(v => v.visitCount > 1).length;
     return visitors.length > 0 ? Math.round((engagedVisitors / visitors.length) * 100) : 0;
   }

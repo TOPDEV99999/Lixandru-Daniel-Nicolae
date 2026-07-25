@@ -44,7 +44,7 @@ class ContactController {
             if (!validationResult.success) {
                 return res.status(400).json({
                     error: 'Validation failed',
-                    details: validationResult.error.errors.map(err => ({
+                    details: validationResult.error.issues.map(err => ({
                         field: err.path.join('.'),
                         message: err.message
                     }))
@@ -80,7 +80,7 @@ class ContactController {
                 message: cleanMessage,
                 visitorIp: clientIp,
                 browser: detectedBrowser,
-                country: detectedCountry,
+                country: Array.isArray(detectedCountry) ? detectedCountry[0] : detectedCountry,
                 userId: user?.userId || userId
             };
             // Create contact message
@@ -158,7 +158,8 @@ class ContactController {
                 return res.status(401).json({ error: 'Not authenticated' });
             }
             const { id } = req.params;
-            const message = await this.contactRepository.findById(id);
+            const idStr = Array.isArray(id) ? id[0] : id;
+            const message = await this.contactRepository.findById(idStr);
             if (!message) {
                 return res.status(404).json({ error: 'Contact message not found' });
             }
@@ -179,19 +180,20 @@ class ContactController {
                 return res.status(403).json({ error: 'Admin access required' });
             }
             const { id } = req.params;
+            const idStr = Array.isArray(id) ? id[0] : id;
             // Validate input
             const validationResult = contactValidation_1.contactUpdateSchema.safeParse(req.body);
             if (!validationResult.success) {
                 return res.status(400).json({
                     error: 'Validation failed',
-                    details: validationResult.error.errors.map(err => ({
+                    details: validationResult.error.issues.map(err => ({
                         field: err.path.join('.'),
                         message: err.message
                     }))
                 });
             }
             const updateData = validationResult.data;
-            const updatedMessage = await this.contactRepository.update(id, updateData);
+            const updatedMessage = await this.contactRepository.update(idStr, updateData);
             if (!updatedMessage) {
                 return res.status(404).json({ error: 'Contact message not found' });
             }
@@ -211,7 +213,8 @@ class ContactController {
                 return res.status(403).json({ error: 'Admin access required' });
             }
             const { id } = req.params;
-            const deleted = await this.contactRepository.delete(id);
+            const idStr = Array.isArray(id) ? id[0] : id;
+            const deleted = await this.contactRepository.delete(idStr);
             if (!deleted) {
                 return res.status(404).json({ error: 'Contact message not found' });
             }

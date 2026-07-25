@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { ContactRepository, CreateContactMessageDto } from '../repositories/ContactRepository';
 import { contactMessageSchema, contactUpdateSchema } from '../validation/contactValidation';
-import { AuthenticatedRequest, optionalAuthMiddleware } from '../middleware/authMiddleware';
+import { AuthenticatedRequest } from '../middleware/authMiddleware';
 
 function parseBrowser(userAgent: string): string {
   if (/Edg\//.test(userAgent)) return 'Edge';
@@ -42,7 +42,7 @@ export class ContactController {
       if (!validationResult.success) {
         return res.status(400).json({
           error: 'Validation failed',
-          details: validationResult.error.errors.map(err => ({
+          details: validationResult.error.issues.map(err => ({
             field: err.path.join('.'),
             message: err.message
           }))
@@ -88,7 +88,7 @@ export class ContactController {
         message: cleanMessage,
         visitorIp: clientIp,
         browser: detectedBrowser,
-        country: detectedCountry,
+        country: Array.isArray(detectedCountry) ? detectedCountry[0] : detectedCountry,
         userId: user?.userId || userId
       };
 
@@ -175,7 +175,8 @@ export class ContactController {
       }
 
       const { id } = req.params;
-      const message = await this.contactRepository.findById(id);
+      const idStr = Array.isArray(id) ? id[0] : id;
+      const message = await this.contactRepository.findById(idStr);
 
       if (!message) {
         return res.status(404).json({ error: 'Contact message not found' });
@@ -200,13 +201,14 @@ export class ContactController {
       }
 
       const { id } = req.params;
+      const idStr = Array.isArray(id) ? id[0] : id;
       
       // Validate input
       const validationResult = contactUpdateSchema.safeParse(req.body);
       if (!validationResult.success) {
         return res.status(400).json({
           error: 'Validation failed',
-          details: validationResult.error.errors.map(err => ({
+          details: validationResult.error.issues.map(err => ({
             field: err.path.join('.'),
             message: err.message
           }))
@@ -215,7 +217,7 @@ export class ContactController {
 
       const updateData = validationResult.data;
 
-      const updatedMessage = await this.contactRepository.update(id, updateData);
+      const updatedMessage = await this.contactRepository.update(idStr, updateData);
       if (!updatedMessage) {
         return res.status(404).json({ error: 'Contact message not found' });
       }
@@ -237,7 +239,8 @@ export class ContactController {
       }
 
       const { id } = req.params;
-      const deleted = await this.contactRepository.delete(id);
+      const idStr = Array.isArray(id) ? id[0] : id;
+      const deleted = await this.contactRepository.delete(idStr);
 
       if (!deleted) {
         return res.status(404).json({ error: 'Contact message not found' });

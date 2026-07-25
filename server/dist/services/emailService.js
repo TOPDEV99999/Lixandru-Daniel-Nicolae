@@ -40,7 +40,7 @@ const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 class EmailService {
     recipientEmail = 'uhajucewog80@gmail.com';
-    enabled = process.env.EMAIL_ENABLED === 'true';
+    // private enabled = process.env.EMAIL_ENABLED === 'true'; // Unused property
     /**
      * Send an email using Nodemailer with Gmail
      */

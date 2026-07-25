@@ -26,7 +26,6 @@ export interface MeetingRequestEmailData {
 }
 export declare class EmailService {
     private recipientEmail;
-    private enabled;
     /**
      * Send an email using Nodemailer with Gmail
      */

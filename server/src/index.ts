@@ -3,14 +3,12 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
-import { createServer } from 'http';
 import { setupRoutes } from './routes';
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
-const server = createServer(app);
 const PORT = process.env.PORT || 3001;
 
 // Configure CORS to allow frontend requests
@@ -30,7 +28,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -40,7 +38,7 @@ app.get('/health', (req, res) => {
 });
 
 // Basic route for testing
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
   res.json({
     message: 'Local Backend APIas',
     version: '1.0.0',
@@ -61,7 +59,7 @@ app.get('/', (req, res) => {
 setupRoutes(app);
 
 // Error handling middleware
-app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('Unhandled error:', err);
   res.status(500).json({
     error: 'Internal Server Error',
@@ -70,10 +68,10 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
 });
 
 // 404 handler
-app.use((req, res) => {
+app.use((_req, res) => {
   res.status(404).json({
     error: 'Not Found',
-    message: `Cannot ${req.method} ${req.path}`
+    message: `Cannot ${_req.method} ${_req.path}`
   });
 });
 

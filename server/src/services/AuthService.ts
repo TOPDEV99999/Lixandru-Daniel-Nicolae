@@ -116,11 +116,11 @@ export class AuthService {
     };
 
     const accessToken = jwt.sign(payload, this.jwtSecret, {
-      expiresIn: this.jwtExpiresIn
+      expiresIn: this.jwtExpiresIn as any
     });
 
     const refreshToken = jwt.sign(payload, this.jwtSecret, {
-      expiresIn: this.refreshTokenExpiresIn
+      expiresIn: this.refreshTokenExpiresIn as any
     });
 
     // Parse expiresIn to seconds

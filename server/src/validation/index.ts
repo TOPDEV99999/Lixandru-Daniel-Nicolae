@@ -24,6 +24,6 @@ export class ValidationResult<T> {
   }
 
   static error<T>(errors: ValidationError[]): ValidationResult<T> {
-    return new ValidationResult(false, undefined, errors);
+    return new ValidationResult<T>(false, undefined, errors);
   }
 }

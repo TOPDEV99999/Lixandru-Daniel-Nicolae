@@ -50,7 +50,8 @@ export class VisitorController {
     try {
       const visitorIp = getClientIp(req);
       const userAgent = req.headers['user-agent'] || 'unknown';
-      const country = req.headers['cf-ipcountry'] || 'unknown';
+      const countryRaw = req.headers['cf-ipcountry'];
+      const country = Array.isArray(countryRaw) ? countryRaw[0] || 'unknown' : countryRaw || 'unknown';
       const browser = parseBrowser(userAgent);
       const os = parseOS(userAgent);
       const device = parseDevice(userAgent);
@@ -187,7 +188,8 @@ export class VisitorController {
       }
 
       const { id } = req.params;
-      const visitor = await this.visitorRepository.findById(id);
+      const idStr = Array.isArray(id) ? id[0] : id;
+      const visitor = await this.visitorRepository.findById(idStr);
 
       if (!visitor) {
         return res.status(404).json({ error: 'Visitor not found' });
@@ -207,7 +209,8 @@ export class VisitorController {
       }
 
       const { id } = req.params;
-      const deleted = await this.visitorRepository.delete(id);
+      const idStr = Array.isArray(id) ? id[0] : id;
+      const deleted = await this.visitorRepository.delete(idStr);
 
       if (!deleted) {
         return res.status(404).json({ error: 'Visitor not found' });
