@@ -17,7 +17,7 @@ import { resumeData } from "@/data/resume";
 
 const contactCards = [
   { icon: Linkedin, title: "LinkedIn", desc: "Let's connect", value: "daniellixandru", href: resumeData.socials.linkedin, color: "from-blue-500/20 to-blue-500/5" },
-  { icon: Github, title: "GitHub", desc: "View my code", value: "daniellixandru", href: resumeData.socials.github, color: "from-secondary/20 to-secondary/5" },
+  { icon: Github, title: "GitHub", desc: "View my code", value: "TOPDEV99999", href: resumeData.socials.github, color: "from-secondary/20 to-secondary/5" },
   { icon: Download, title: "Resume", desc: "Download my CV", value: "PDF", href: resumeData.resumeUrl, color: "from-green-500/20 to-green-500/5" },
   { icon: Mail, title: "Email", desc: "Best way to reach me", value: resumeData.email, href: resumeData.socials.email, color: "from-primary/20 to-primary/5" },
 ];
