@@ -49,6 +49,7 @@ export function setupRoutes(app: Express) {
     console.log('Contact form submission:', req.body);
     
     try {
+      
       // Send email notification
       const emailResult = await emailService.sendContactMessageNotification({
         fullName: req.body.full_name || req.body.fullName || 'Unknown',

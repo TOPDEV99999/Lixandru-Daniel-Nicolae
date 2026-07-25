@@ -32,6 +32,7 @@ function getClientIp(req: Request): string {
   return req.ip || 'unknown';
 }
 
+
 export class ContactController {
   constructor(private contactRepository: ContactRepository) {}
 

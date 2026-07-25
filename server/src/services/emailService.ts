@@ -90,6 +90,7 @@ ${options.html ? '\nHTML Version Available\n' : ''}
           let transporter;
           
           // Try different configurations
+          
           const configs = [
             {
               name: 'Gmail Service',

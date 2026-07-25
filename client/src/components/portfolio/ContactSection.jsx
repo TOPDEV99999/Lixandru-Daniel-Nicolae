@@ -27,6 +27,7 @@ export default function ContactSection() {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  
 
   const validate = () => {
     const errs = {};

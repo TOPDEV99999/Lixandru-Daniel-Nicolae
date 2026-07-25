@@ -17,6 +17,7 @@ export class ValidationResult<T> {
     this.success = success;
     this.data = data;
     this.errors = errors;
+    
   }
 
   static success<T>(data: T): ValidationResult<T> {

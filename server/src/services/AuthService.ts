@@ -18,6 +18,7 @@ export interface JwtPayload {
 export class AuthService {
   constructor(
     private userRepository: UserRepository,
+    
     private jwtSecret: string,
     private jwtExpiresIn: string = '24h',
     private refreshTokenExpiresIn: string = '7d'

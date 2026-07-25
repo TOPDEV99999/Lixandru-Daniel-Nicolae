@@ -26,6 +26,7 @@ model User {
   contactMessages ContactMessage[]
   meetingRequests MeetingRequest[]
   
+  
   @@map("users")
 }
 

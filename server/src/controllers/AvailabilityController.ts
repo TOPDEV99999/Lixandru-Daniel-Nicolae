@@ -9,6 +9,7 @@ const availabilitySchema = z.object({
 export class AvailabilityController {
   constructor(private meetingRepository: MeetingRepository) {}
 
+  
   async getAvailability(req: Request, res: Response) {
     try {
       // Validate input

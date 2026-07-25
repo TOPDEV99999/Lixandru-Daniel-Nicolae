@@ -9,6 +9,7 @@ export class AdminController {
   constructor(
     private visitorRepository: VisitorRepository,
     private meetingRepository: MeetingRepository,
+    
     private contactRepository: ContactRepository,
     private userRepository: UserRepository
   ) {}

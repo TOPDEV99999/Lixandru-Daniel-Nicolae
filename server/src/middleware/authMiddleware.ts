@@ -17,6 +17,7 @@ export const authMiddleware = (requiredRole?: string) => {
 
       const token = authHeader.split(' ')[1];
       
+      
       // Verify token
       const jwtSecret = process.env.JWT_SECRET;
       if (!jwtSecret) {

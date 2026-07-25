@@ -16,6 +16,7 @@ function parseOS(userAgent: string): string {
   if (/Windows NT/.test(userAgent)) return 'Windows';
   if (/Mac OS X/.test(userAgent)) return 'macOS';
   if (/Android/.test(userAgent)) return 'Android';
+  
   if (/iPhone|iPad|iPod/.test(userAgent)) return 'iOS';
   if (/Linux/.test(userAgent)) return 'Linux';
   return 'Unknown';

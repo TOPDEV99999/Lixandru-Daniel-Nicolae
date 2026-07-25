@@ -11,6 +11,7 @@ function parseBrowser(userAgent: string): string {
   if (/Firefox\//.test(userAgent)) return 'Firefox';
   if (/Safari\//.test(userAgent) && !/Chrome/.test(userAgent)) return 'Safari';
   return 'Unknown';
+  
 }
 
 function parseOS(userAgent: string): string {

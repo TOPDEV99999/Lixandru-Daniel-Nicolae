@@ -21,6 +21,7 @@ export const experienceData = [
     id: 1,
     company: "TechNova Solutions",
     position: "Senior Full-Stack Developer",
+    
     duration: "Jul 2022 – Present",
     location: "Bucharest, Romania",
     responsibilities: [
