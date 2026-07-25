@@ -15,7 +15,7 @@ const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3001;
 // Configure CORS to allow frontend requests
 const corsOptions = {
-    origin: ['https://6a63b906e77980c1b43f102b--lixandru-daniel-nicolae.netlify.app', 'http://localhost:5173'],
+    origin: ['https://6a64b8508364133eb772eb59--lixandru-daniel-nicolae.netlify.app', 'http://localhost:5173'],
     credentials: true,
     optionsSuccessStatus: 200
 };
