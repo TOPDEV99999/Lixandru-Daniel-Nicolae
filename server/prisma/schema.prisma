@@ -10,7 +10,6 @@ generator client {
 // SQLite database configuration
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
 }
 
 // User model for authentication (enhanced from Base44 User entity)
