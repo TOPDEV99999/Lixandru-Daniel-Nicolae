@@ -4,8 +4,8 @@ export declare const userRegistrationSchema: z.ZodObject<{
     password: z.ZodString;
     name: z.ZodOptional<z.ZodString>;
     role: z.ZodOptional<z.ZodDefault<z.ZodEnum<{
-        admin: "admin";
         user: "user";
+        admin: "admin";
     }>>>;
 }, z.core.$strip>;
 export declare const userLoginSchema: z.ZodObject<{
@@ -16,8 +16,8 @@ export declare const userUpdateSchema: z.ZodObject<{
     email: z.ZodOptional<z.ZodString>;
     name: z.ZodOptional<z.ZodString>;
     role: z.ZodOptional<z.ZodEnum<{
-        admin: "admin";
         user: "user";
+        admin: "admin";
     }>>;
     password: z.ZodOptional<z.ZodString>;
 }, z.core.$strip>;

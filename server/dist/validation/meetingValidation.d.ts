@@ -14,10 +14,10 @@ export declare const meetingRequestSchema: z.ZodObject<{
 }, z.core.$strip>;
 export declare const meetingUpdateSchema: z.ZodObject<{
     status: z.ZodOptional<z.ZodEnum<{
-        accepted: "accepted";
-        completed: "completed";
         pending: "pending";
+        accepted: "accepted";
         rejected: "rejected";
+        completed: "completed";
     }>>;
     acceptedDate: z.ZodOptional<z.ZodString>;
     acceptedTime: z.ZodOptional<z.ZodString>;

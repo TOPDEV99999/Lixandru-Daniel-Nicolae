@@ -11,9 +11,9 @@ export declare const contactMessageSchema: z.ZodObject<{
 }, z.core.$strip>;
 export declare const contactUpdateSchema: z.ZodObject<{
     status: z.ZodOptional<z.ZodEnum<{
-        archived: "archived";
         new: "new";
         read: "read";
+        archived: "archived";
     }>>;
     userId: z.ZodOptional<z.ZodString>;
 }, z.core.$strip>;
