@@ -81,50 +81,107 @@ ${options.html ? '\nHTML Version Available\n' : ''}
                 // Try to send actual email with Nodemailer (with error handling)
                 try {
                     console.log('📧 Attempting to send email via Gmail...');
-                    // Try port 587 (TLS) first, as port 465 might be blocked
-                    const transporter = nodemailer.createTransport({
-                        host: 'smtp.gmail.com',
-                        port: 587,
-                        secure: false, // Use TLS
-                        requireTLS: true,
-                        auth: {
-                            user: process.env.EMAIL_USER,
-                            pass: process.env.EMAIL_PASSWORD
+                    // Create transporter with multiple fallback options
+                    let transporter;
+                    // Try different configurations
+                    const configs = [
+                        {
+                            name: 'Gmail Service',
+                            config: {
+                                service: 'gmail',
+                                auth: {
+                                    user: process.env.EMAIL_USER,
+                                    pass: process.env.EMAIL_PASSWORD
+                                },
+                                timeout: 10000 // 10 second timeout
+                            }
                         },
-                        tls: {
-                            rejectUnauthorized: false // Less strict for testing
+                        {
+                            name: 'SMTP Gmail TLS',
+                            config: {
+                                host: 'smtp.gmail.com',
+                                port: 587,
+                                secure: false,
+                                requireTLS: true,
+                                auth: {
+                                    user: process.env.EMAIL_USER,
+                                    pass: process.env.EMAIL_PASSWORD
+                                },
+                                tls: {
+                                    rejectUnauthorized: false
+                                },
+                                timeout: 10000
+                            }
+                        },
+                        {
+                            name: 'SMTP Gmail SSL',
+                            config: {
+                                host: 'smtp.gmail.com',
+                                port: 465,
+                                secure: true,
+                                auth: {
+                                    user: process.env.EMAIL_USER,
+                                    pass: process.env.EMAIL_PASSWORD
+                                },
+                                timeout: 10000
+                            }
                         }
-                    });
-                    const mailOptions = {
-                        from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-                        to: options.to,
-                        subject: options.subject,
-                        text: options.text,
-                        html: options.html
-                    };
-                    const info = await transporter.sendMail(mailOptions);
-                    console.log(`✅ Email sent successfully to ${options.to}`);
-                    console.log('Message ID:', info.messageId);
-                    return {
-                        success: true,
-                        message: 'Email sent successfully via Gmail'
-                    };
+                    ];
+                    let lastError = null;
+                    for (const { name, config } of configs) {
+                        try {
+                            console.log(`  Trying ${name}...`);
+                            transporter = nodemailer.createTransport(config);
+                            // Test connection with short timeout
+                            await transporter.verify();
+                            console.log(`  ✅ ${name} connection successful`);
+                            const mailOptions = {
+                                from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+                                to: options.to,
+                                subject: options.subject,
+                                text: options.text,
+                                html: options.html
+                            };
+                            const info = await transporter.sendMail(mailOptions);
+                            console.log(`✅ Email sent successfully to ${options.to} via ${name}`);
+                            console.log('Message ID:', info.messageId);
+                            return {
+                                success: true,
+                                message: `Email sent successfully via Gmail (${name})`
+                            };
+                        }
+                        catch (configError) {
+                            lastError = configError;
+                            console.log(`  ❌ ${name} failed: ${configError.message}`);
+                            continue; // Try next configuration
+                        }
+                    }
+                    // All configurations failed
+                    throw lastError;
                 }
                 catch (gmailError) {
-                    console.error('❌ Gmail sending failed:', gmailError.message);
+                    console.error('❌ All Gmail SMTP attempts failed:', gmailError.message);
                     console.error('Error code:', gmailError.code);
-                    if (gmailError.code === 'ETIMEDOUT' || gmailError.code === 'ECONNREFUSED') {
-                        console.log('⚠️ Network/firewall blocking SMTP. Emails saved to file only.');
-                        console.log('To fix:');
+                    if (gmailError.code === 'ETIMEDOUT' || gmailError.code === 'ESOCKET' || gmailError.code === 'ECONNREFUSED') {
+                        console.log('⚠️ Network/firewall blocking SMTP ports 587/465.');
+                        console.log('Emails will be saved to file only.');
+                        console.log('');
+                        console.log('SOLUTIONS:');
                         console.log('1. Check Windows Firewall settings');
-                        console.log('2. Try different network (mobile hotspot)');
-                        console.log('3. Use email API service (SendGrid/Mailgun) instead of SMTP');
+                        console.log('2. Try a different network (mobile hotspot)');
+                        console.log('3. Use email API service (SendGrid/Mailgun) instead');
+                        console.log('4. Email logs are saved in server/email_logs/');
+                        console.log('');
+                        console.log('For immediate email delivery, consider:');
+                        console.log('- Using SendGrid/Mailgun API');
+                        console.log('- Setting up a different email provider');
+                        console.log('- Using email forwarding service');
                     }
                     console.log('📝 Falling back to file logging...');
                 }
             }
             else {
-                console.log('⚠️ Gmail credentials not configured. Emails will only be logged to file.');
+                console.log('⚠️ Gmail credentials not configured. Emails will be logged to file.');
             }
             return {
                 success: true,

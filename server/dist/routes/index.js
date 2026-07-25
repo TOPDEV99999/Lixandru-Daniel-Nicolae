@@ -291,6 +291,57 @@ function setupRoutes(app) {
             });
         }
     });
+    // Resume download endpoint
+    app.get('/api/resume', (req, res) => {
+        const fs = require('fs');
+        const path = require('path');
+        console.log('Resume download requested');
+        // Try to find the resume file
+        const possiblePaths = [
+            path.join(__dirname, '../../files/Lixandru_Daniel_Nicolae.pdf'),
+            path.join(__dirname, '../files/Lixandru_Daniel_Nicolae.pdf'),
+            path.join(process.cwd(), 'files/Lixandru_Daniel_Nicolae.pdf'),
+            path.join(__dirname, '../../../files/Lixandru_Daniel_Nicolae.pdf')
+        ];
+        let foundPath = null;
+        for (const filePath of possiblePaths) {
+            if (fs.existsSync(filePath)) {
+                foundPath = filePath;
+                console.log('Found resume at:', filePath);
+                break;
+            }
+        }
+        if (!foundPath) {
+            console.error('Resume file not found. Searched paths:', possiblePaths);
+            return res.status(404).json({
+                error: 'Resume file not found',
+                message: 'Resume PDF file could not be located on the server'
+            });
+        }
+        // Get the filename for download
+        const filename = 'Lixandru_Daniel_Nicolae_Resume.pdf';
+        // Set headers and send file
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        try {
+            const fileStream = fs.createReadStream(foundPath);
+            fileStream.pipe(res);
+            fileStream.on('error', (error) => {
+                console.error('Error streaming resume file:', error);
+                res.status(500).json({
+                    error: 'Failed to download resume',
+                    message: error.message
+                });
+            });
+        }
+        catch (error) {
+            console.error('Error downloading resume:', error);
+            res.status(500).json({
+                error: 'Failed to download resume',
+                message: error.message
+            });
+        }
+    });
     // Function invocation compatibility routes (for Base44 function compatibility)
     app.post('/api/functions/:functionName', async (req, res) => {
         const { functionName } = req.params;
