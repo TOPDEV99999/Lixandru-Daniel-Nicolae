@@ -20,8 +20,8 @@ const corsOptions = {
 // console.log("323232");
 
 // Middleware
-app.use(cors(corsOptions));
-// app.use(cors());
+// app.use(cors(corsOptions));
+app.use(cors());
 app.use(helmet());
 
 app.use(morgan('dev'));
