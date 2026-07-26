@@ -39,6 +39,62 @@ export default function ContactSection() {
     return Object.keys(errs).length === 0;
   };
 
+  // FormSubmit integration - sends email directly from frontend
+  const sendEmailViaFormSubmit = async (formData) => {
+    try {
+      // Your FormSubmit endpoint URL
+      // Get this from: https://formsubmit.co/your-email@gmail.com
+      const FORM_SUBMIT_URL = 'https://formsubmit.co/uhajucewog80@gmail.com';
+      
+      // Prepare form data for FormSubmit
+      const formSubmitData = {
+        _subject: `New Contact Message from ${formData.full_name}`,
+        _replyto: formData.email,
+        _cc: formData.email, // Optional: CC the sender
+        name: formData.full_name,
+        email: formData.email,
+        message: formData.message,
+        _honey: '', // Honeypot field for spam prevention
+        _template: 'table', // Use table template for better formatting
+        _captcha: 'false' // Disable captcha for better UX
+      };
+
+      console.log('📧 Sending email via FormSubmit to:', FORM_SUBMIT_URL);
+      console.log('Form data:', formSubmitData);
+
+      // Send to FormSubmit using fetch
+      const response = await fetch(FORM_SUBMIT_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(formSubmitData),
+        mode: 'cors' // Important for cross-origin requests
+      });
+
+      if (!response.ok) {
+        throw new Error(`FormSubmit HTTP error: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.text();
+      console.log('✅ FormSubmit response:', result);
+      
+      return {
+        success: true,
+        message: 'Email sent successfully via FormSubmit',
+        result: result
+      };
+      
+    } catch (error) {
+      console.error('❌ FormSubmit error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to send email via FormSubmit'
+      };
+    }
+  };
+
   const handleChange = (field) => (e) => {
     setFormData(prev => ({ ...prev, [field]: e.target.value }));
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: undefined }));
@@ -49,7 +105,26 @@ export default function ContactSection() {
     e.preventDefault();
     if (!validate()) return;
     setIsSubmitting(true);
+    
     try {
+      console.log('Starting dual submission: Email + Backend Storage');
+      
+      // 1. FIRST: Send email directly from frontend using FormSubmit
+      console.log('Step 1: Sending email via FormSubmit...');
+      const emailResult = await sendEmailViaFormSubmit({
+        full_name: formData.full_name,
+        email: formData.email,
+        message: formData.message
+      });
+      
+      if (!emailResult.success) {
+        throw new Error(`Email sending failed: ${emailResult.message}`);
+      }
+      
+      console.log('✅ Email sent successfully via FormSubmit');
+      
+      // 2. SECOND: Store message in backend database (existing flow)
+      console.log('Step 2: Storing message in backend database...');
       console.log('db object:', db);
       console.log('db.functions:', db?.functions);
       
@@ -59,21 +134,27 @@ export default function ContactSection() {
       }
       
       console.log('Calling db.functions.invoke("submitContact", formData)...');
-      const response = await db.functions.invoke("submitContact", formData);
-      console.log('API response:', response);
-      if (response.data.success) {
+      const backendResponse = await db.functions.invoke("submitContact", formData);
+      console.log('Backend API response:', backendResponse);
+      
+      if (backendResponse.data.success) {
         toast({
           title: "Message sent successfully!",
-          description: "Thank you for reaching out. I'll get back to you soon.",
+          description: "✅ Email sent to your Gmail via FormSubmit\n✅ Message saved to database\nI'll get back to you soon.",
         });
         setFormData({ full_name: "", email: "", message: "" });
       } else {
-        toast({ title: response.data.error || "Failed to send message", variant: "destructive" });
+        // Even if backend fails, email was sent successfully
+        toast({ 
+          title: "Email sent but storage failed",
+          description: `✅ Email sent to your Gmail\n⚠️ Storage error: ${backendResponse.data.error || "Unknown"}`,
+          variant: "default"
+        });
       }
     } catch (error) {
       console.error("Contact form submission error:", error);
       toast({ 
-        title: "Something went wrong. Please try again.", 
+        title: "Something went wrong", 
         description: error.message,
         variant: "destructive" 
       });
