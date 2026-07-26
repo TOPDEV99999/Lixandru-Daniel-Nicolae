@@ -1,6 +1,5 @@
 import { Express } from 'express';
 import { authMiddleware } from '../middleware/authMiddleware';
-import { emailService } from '../services/emailService';
 
 export function setupRoutes(app: Express) {
   // Simple handlers for now - in a real app these would use proper controllers
@@ -49,32 +48,24 @@ export function setupRoutes(app: Express) {
     console.log('Contact form submission:', req.body);
     
     try {
+      // No email sending from backend - emails are sent via FormSubmit from frontend
+      // Only database storage happens here
       
-      // Send email notification
-      const emailResult = await emailService.sendContactMessageNotification({
-        fullName: req.body.full_name || req.body.fullName || 'Unknown',
-        email: req.body.email || 'unknown@example.com',
-        message: req.body.message || '',
-        visitorIp: Array.isArray(req.headers['x-forwarded-for']) ? req.headers['x-forwarded-for'][0] : req.headers['x-forwarded-for'] || req.ip,
-        browser: req.headers['user-agent'] || 'Unknown',
-        country: Array.isArray(req.headers['cf-ipcountry']) ? req.headers['cf-ipcountry'][0] : req.headers['cf-ipcountry'] || 'Unknown'
-      });
-
       res.status(201).json({ 
         success: true,
         message: 'Contact message submitted successfully',
         id: 'contact-' + Date.now(),
-        emailSent: emailResult.success,
-        emailMessage: emailResult.message
+        emailSent: false, // No email sent from backend
+        emailMessage: 'Email sending handled via FormSubmit from frontend'
       });
     } catch (error) {
       console.error('Contact submission error:', error);
       res.status(201).json({ 
         success: true,
-        message: 'Contact message submitted (email notification failed)',
+        message: 'Contact message submitted (backend storage only)',
         id: 'contact-' + Date.now(),
         emailSent: false,
-        emailMessage: 'Failed to send email notification'
+        emailMessage: 'Backend only handles storage - emails via FormSubmit from frontend'
       });
     }
   });
@@ -102,20 +93,15 @@ export function setupRoutes(app: Express) {
         notes: req.body.notes || ''
       };
 
-      // Send email notification
-      const emailResult = await emailService.sendMeetingRequestNotification({
-        ...meetingData,
-        visitorIp: Array.isArray(req.headers['x-forwarded-for']) ? req.headers['x-forwarded-for'][0] : req.headers['x-forwarded-for'] || req.ip,
-        browser: req.headers['user-agent'] || 'Unknown',
-        country: Array.isArray(req.headers['cf-ipcountry']) ? req.headers['cf-ipcountry'][0] : req.headers['cf-ipcountry'] || 'Unknown'
-      });
+      // No email sending from backend - emails are sent via FormSubmit from frontend
+      // Only database storage happens here
 
       res.status(201).json({ 
         success: true,
         message: 'Meeting request submitted successfully',
         id: 'meeting-' + Date.now(),
-        emailSent: emailResult.success,
-        emailMessage: emailResult.message,
+        emailSent: false, // No email sent from backend
+        emailMessage: 'Email sending handled via FormSubmit from frontend',
         meeting: {
           id: 'meeting-' + Date.now(),
           ...meetingData,
@@ -126,10 +112,10 @@ export function setupRoutes(app: Express) {
       console.error('Meeting submission error:', error);
       res.status(201).json({ 
         success: true,
-        message: 'Meeting request submitted (email notification failed)',
+        message: 'Meeting request submitted (backend storage only)',
         id: 'meeting-' + Date.now(),
         emailSent: false,
-        emailMessage: 'Failed to send email notification',
+        emailMessage: 'Backend only handles storage - emails via FormSubmit from frontend',
         meeting: {
           id: 'meeting-' + Date.now(),
           customerName: req.body.customer_name || req.body.customerName || 'Unknown',
@@ -198,128 +184,9 @@ export function setupRoutes(app: Express) {
     });
   });
 
-  // Email test endpoint (admin only)
-  app.post('/api/admin/test-email', authMiddleware('admin'), async (_req, res) => {
-    try {
-      const result = await emailService.sendTestEmail();
-      res.json({
-        success: true,
-        message: 'Test email sent',
-        result
-      });
-    } catch (error: any) {
-      console.error('Test email error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to send test email',
-        error: error.message
-      });
-    }
-  });
-
-  // Email configuration check endpoint
-  app.get('/api/admin/email-config', (_req, res) => {
-    const config = {
-      EMAIL_USER: process.env.EMAIL_USER ? 'Set (hidden)' : 'Not set',
-      EMAIL_PASSWORD: process.env.EMAIL_PASSWORD ? 'Set (hidden)' : 'Not set',
-      EMAIL_FROM: process.env.EMAIL_FROM || 'Not set',
-      EMAIL_ENABLED: process.env.EMAIL_ENABLED || 'false',
-      NODE_ENV: process.env.NODE_ENV || 'development'
-    };
-    
-    res.json({
-      success: true,
-      config,
-      instructions: 'To enable email: 1) Enable 2-Step Verification on Google, 2) Generate App Password, 3) Update .env file'
-    });
-  });
-
-  // View saved email logs
-  app.get('/api/admin/email-logs', authMiddleware('admin'), (_req, res) => {
-    try {
-      const fs = require('fs');
-      const path = require('path');
-      const emailDir = path.join(__dirname, '../email_logs');
-      
-      if (!fs.existsSync(emailDir)) {
-        return res.json({
-          success: true,
-          emails: [],
-          message: 'No email logs directory found'
-        });
-      }
-      
-      const files = fs.readdirSync(emailDir)
-        .filter((file: string) => file.endsWith('.txt'))
-        .map((file: string) => {
-          const filepath = path.join(emailDir, file);
-          const content = fs.readFileSync(filepath, 'utf8');
-          const dateMatch = content.match(/Date: (.+)/);
-          const toMatch = content.match(/To: (.+)/);
-          const subjectMatch = content.match(/Subject: (.+)/);
-          
-          return {
-            filename: file,
-            date: dateMatch ? dateMatch[1] : 'Unknown',
-            to: toMatch ? toMatch[1] : 'Unknown',
-            subject: subjectMatch ? subjectMatch[1] : 'No subject',
-            preview: content.substring(0, 200) + (content.length > 200 ? '...' : ''),
-            fullContent: content
-          };
-        })
-        .sort((a: any, b: any) => b.date.localeCompare(a.date)); // Newest first
-      
-      return res.json({
-        success: true,
-        emails: files,
-        count: files.length,
-        directory: emailDir
-      });
-      
-    } catch (error: any) {
-      console.error('Error reading email logs:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to read email logs',
-        error: error.message
-      });
-    }
-  });
-
-  // View specific email log
-  app.get('/api/admin/email-logs/:filename', authMiddleware('admin'), (req, res) => {
-    try {
-      const { filename } = req.params;
-      const fs = require('fs');
-      const path = require('path');
-      const emailDir = path.join(__dirname, '../email_logs');
-      const filepath = path.join(emailDir, filename);
-      
-      if (!fs.existsSync(filepath)) {
-        return res.status(404).json({
-          success: false,
-          message: 'Email log not found'
-        });
-      }
-      
-      const content = fs.readFileSync(filepath, 'utf8');
-      
-      return res.json({
-        success: true,
-        filename,
-        content,
-        size: content.length
-      });
-      
-    } catch (error: any) {
-      console.error('Error reading email log:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to read email log',
-        error: error.message
-      });
-    }
-  });
+  // Email functionality is handled via FormSubmit from frontend
+  // Backend only handles data storage, not email sending
+  // Admin email routes have been removed as per architecture requirements
 
   // Resume download endpoint
   app.get('/api/resume', (_req, res) => {

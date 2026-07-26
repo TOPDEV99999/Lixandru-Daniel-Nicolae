@@ -39,7 +39,69 @@ export default function MeetingForm({ selectedDate, selectedTime, onSubmitted })
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: undefined }));
   };
 
+  // FormSubmit integration - sends meeting request email directly from frontend
+  const sendMeetingEmailViaFormSubmit = async (meetingData) => {
+    try {
+      // Your FormSubmit endpoint URL
+      const FORM_SUBMIT_URL = 'https://formsubmit.co/uhajucewog80@gmail.com';
+      
+      // Prepare meeting request data for FormSubmit
+      const formSubmitData = {
+        _subject: `Meeting Request: ${meetingData.customer_name} - ${meetingData.meeting_topic}`,
+        _replyto: meetingData.email,
+        _cc: meetingData.email, // Optional: CC the sender
+        name: meetingData.customer_name,
+        email: meetingData.email,
+        company: meetingData.company || 'Not specified',
+        meeting_topic: meetingData.meeting_topic,
+        requested_date: meetingData.requested_date,
+        requested_time: meetingData.requested_time,
+        notes: meetingData.notes || 'No additional notes',
+        meeting_duration: '60 minutes',
+        meeting_format: 'Google Meet',
+        _honey: '', // Honeypot field for spam prevention
+        _template: 'table', // Use table template for better formatting
+        _captcha: 'false' // Disable captcha for better UX
+      };
+
+      console.log('📧 Sending meeting request email via FormSubmit to:', FORM_SUBMIT_URL);
+      console.log('Meeting form data:', formSubmitData);
+
+      // Send to FormSubmit using fetch
+      const response = await fetch(FORM_SUBMIT_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(formSubmitData),
+        mode: 'cors' // Important for cross-origin requests
+      });
+
+      if (!response.ok) {
+        throw new Error(`FormSubmit HTTP error: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.text();
+      console.log('✅ FormSubmit response:', result);
+      
+      return {
+        success: true,
+        message: 'Meeting request email sent successfully via FormSubmit',
+        result: result
+      };
+      
+    } catch (error) {
+      console.error('❌ FormSubmit error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to send meeting request email via FormSubmit'
+      };
+    }
+  };
+
   const handleSubmit = async (e) => {
+    console.log('Meeting form data:', formData);
     e.preventDefault();
     if (!selectedDate || !selectedTime) {
       toast({ title: "Please select a date and time first", variant: "destructive" });
@@ -47,26 +109,73 @@ export default function MeetingForm({ selectedDate, selectedTime, onSubmitted })
     }
     if (!validate()) return;
     setIsSubmitting(true);
+    
     try {
-      const response = await db.functions.invoke("submitMeeting", {
+      console.log('Starting dual submission: Meeting Email + Backend Storage');
+      
+      // 1. FIRST: Send meeting request email directly from frontend using FormSubmit
+      console.log('Step 1: Sending meeting request email via FormSubmit...');
+      const emailResult = await sendMeetingEmailViaFormSubmit({
+        customer_name: formData.customer_name,
+        email: formData.email,
+        company: formData.company,
+        meeting_topic: formData.meeting_topic,
+        notes: formData.notes,
+        requested_date: format(selectedDate, "yyyy-MM-dd"),
+        requested_time: selectedTime
+      });
+      
+      if (!emailResult.success) {
+        throw new Error(`Meeting email sending failed: ${emailResult.message}`);
+      }
+      
+      console.log('✅ Meeting request email sent successfully via FormSubmit');
+      
+      // 2. SECOND: Store meeting request in backend database (existing flow)
+      console.log('Step 2: Storing meeting request in backend database...');
+      console.log('db object:', db);
+      console.log('db.functions:', db?.functions);
+      
+      // Check if db.functions.invoke exists
+      if (!db?.functions?.invoke) {
+        throw new Error('Base44 client not properly initialized. db.functions.invoke is not available.');
+      }
+      
+      console.log('Calling db.functions.invoke("submitMeeting", meetingData)...');
+      const backendResponse = await db.functions.invoke("submitMeeting", {
         ...formData,
         requested_date: format(selectedDate, "yyyy-MM-dd"),
         requested_time: selectedTime
       });
-      if (response.data.success) {
+      
+      console.log('Backend API response:', backendResponse);
+      
+      if (backendResponse.data.success) {
+        // Show success toast with both email and backend success
+        toast({
+          title: "Meeting request submitted successfully!",
+          description: "✅ Meeting request email sent to your Gmail via FormSubmit\n✅ Meeting saved to database\nI'll review your request and send a confirmation email shortly.",
+        });
+        
+        // Call the onSubmitted callback with success
         onSubmitted({
           ...formData,
           requested_date: format(selectedDate, "yyyy-MM-dd"),
           requested_time: selectedTime,
-          id: response.data.id
+          id: backendResponse.data.id
         });
       } else {
-        toast({ title: response.data.error || "Failed to submit", variant: "destructive" });
+        // Even if backend fails, email was sent successfully
+        toast({ 
+          title: "Email sent but meeting storage failed",
+          description: `✅ Meeting request email sent to your Gmail\n⚠️ Storage error: ${backendResponse.data.error || "Unknown"}`,
+          variant: "default"
+        });
       }
     } catch (error) {
       console.error("Meeting form submission error:", error);
       toast({ 
-        title: "Something went wrong. Please try again.", 
+        title: "Something went wrong", 
         description: error.message,
         variant: "destructive" 
       });
