@@ -1,4 +1,4 @@
-const db = globalThis.__B44_DB__ || { auth:{ isAuthenticated: async()=>false, me: async()=>null }, entities:new Proxy({}, { get:()=>({ filter:async()=>[], get:async()=>null, create:async()=>({}), update:async()=>({}), delete:async()=>({}) }) }), integrations:{ Core:{ UploadFile:async()=>({ file_url:'' }) } } };
+import { localAPI } from "@/api/localClient";
 
 import React, { useState, useMemo } from "react";
 import { motion } from "framer-motion";
@@ -70,28 +70,37 @@ export default function MeetingManagement({ meetings, onUpdateMeeting }) {
     }
     setIsResponding(true);
     try {
-      const response = await db.functions.invoke("respondMeeting", {
-        meeting_id: acceptMeeting.id,
+      const response = await localAPI.meeting.respondToMeeting(acceptMeeting.id, {
         action: "accepted",
-        ...acceptForm
+        acceptedDate: acceptForm.accepted_date,
+        acceptedTime: acceptForm.accepted_time,
+        meetLink: acceptForm.meet_link,
+        adminMessage: acceptForm.admin_message
       });
-      if (response.data.success) {
-        onUpdateMeeting(acceptMeeting.id, { status: "accepted", ...acceptForm });
+      if (response.success) {
+        onUpdateMeeting(acceptMeeting.id, { 
+          status: "accepted", 
+          acceptedDate: acceptForm.accepted_date,
+          acceptedTime: acceptForm.accepted_time,
+          meetLink: acceptForm.meet_link,
+          adminMessage: acceptForm.admin_message 
+        });
         toast({
           title: "Meeting accepted!",
-          description: response.data.email_sent
+          description: response.email_sent
             ? "Confirmation email sent to customer."
             : "Email could not be sent automatically. See details below."
         });
-        if (!response.data.email_sent && response.data.email_body) {
-          setAcceptMeeting({ ...acceptMeeting, emailBody: response.data.email_body, emailSubject: response.data.email_subject });
+        if (!response.email_sent && response.email_body) {
+          setAcceptMeeting({ ...acceptMeeting, emailBody: response.email_body, emailSubject: response.email_subject });
         } else {
           setAcceptMeeting(null);
         }
       } else {
-        toast({ title: response.data.error || "Failed to accept", variant: "destructive" });
+        toast({ title: response.error || "Failed to accept", variant: "destructive" });
       }
-    } catch {
+    } catch (error) {
+      console.error("Error accepting meeting:", error);
       toast({ title: "Something went wrong", variant: "destructive" });
     }
     setIsResponding(false);
@@ -100,23 +109,23 @@ export default function MeetingManagement({ meetings, onUpdateMeeting }) {
   const handleReject = async () => {
     setIsResponding(true);
     try {
-      const response = await db.functions.invoke("respondMeeting", {
-        meeting_id: rejectMeeting.id,
+      const response = await localAPI.meeting.respondToMeeting(rejectMeeting.id, {
         action: "rejected"
       });
-      if (response.data.success) {
+      if (response.success) {
         onUpdateMeeting(rejectMeeting.id, { status: "rejected" });
         toast({
           title: "Meeting rejected",
-          description: response.data.email_sent
+          description: response.email_sent
             ? "Rejection email sent to customer."
             : "Email could not be sent automatically."
         });
         setRejectMeeting(null);
       } else {
-        toast({ title: response.data.error || "Failed to reject", variant: "destructive" });
+        toast({ title: response.error || "Failed to reject", variant: "destructive" });
       }
-    } catch {
+    } catch (error) {
+      console.error("Error rejecting meeting:", error);
       toast({ title: "Something went wrong", variant: "destructive" });
     }
     setIsResponding(false);
@@ -124,11 +133,12 @@ export default function MeetingManagement({ meetings, onUpdateMeeting }) {
 
   const saveNotes = async () => {
     try {
-      await db.entities.MeetingRequest.update(viewMeeting.id, { admin_notes: adminNotes });
+      await localAPI.meeting.updateMeeting(viewMeeting.id, { adminNotes: adminNotes });
       onUpdateMeeting(viewMeeting.id, { admin_notes: adminNotes });
       toast({ title: "Notes saved" });
       setViewMeeting(null);
-    } catch {
+    } catch (error) {
+      console.error("Error saving notes:", error);
       toast({ title: "Failed to save notes", variant: "destructive" });
     }
   };

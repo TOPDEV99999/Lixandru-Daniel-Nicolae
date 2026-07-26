@@ -1,5 +1,5 @@
 import { BaseRepository } from './BaseRepository';
-import { User } from '../generated/prisma';
+import { User } from '@prisma/client';
 
 export interface CreateUserDto {
   email: string;

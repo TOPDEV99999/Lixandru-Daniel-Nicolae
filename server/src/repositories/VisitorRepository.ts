@@ -1,5 +1,5 @@
 import { BaseRepository } from './BaseRepository';
-import { Visitor } from '../generated/prisma';
+import { Visitor } from '@prisma/client';
 
 export interface CreateVisitorDto {
   visitorId: string;

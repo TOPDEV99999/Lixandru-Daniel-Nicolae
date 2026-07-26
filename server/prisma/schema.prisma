@@ -4,12 +4,12 @@
 // Generator for Prisma Client
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 // SQLite database configuration
 datasource db {
   provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 // User model for authentication (enhanced from Base44 User entity)

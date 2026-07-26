@@ -1,5 +1,5 @@
 import { BaseRepository } from './BaseRepository';
-import { MeetingRequest } from '../generated/prisma';
+import { MeetingRequest } from '@prisma/client';
 
 export interface CreateMeetingRequestDto {
   customerName: string;

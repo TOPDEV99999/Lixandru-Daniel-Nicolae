@@ -1,6 +1,17 @@
 import { Express } from 'express';
 import jwt from 'jsonwebtoken';
+import { prisma } from '../lib/prisma';
 import { authMiddleware } from '../middleware/authMiddleware';
+
+// Helper function to parse browser from user agent (copied from controllers)
+function parseBrowser(userAgent: string): string {
+  if (/Edg\//.test(userAgent)) return 'Edge';
+  if (/OPR\//.test(userAgent)) return 'Opera';
+  if (/Chrome\//.test(userAgent) && !/Chromium/.test(userAgent)) return 'Chrome';
+  if (/Firefox\//.test(userAgent)) return 'Firefox';
+  if (/Safari\//.test(userAgent) && !/Chrome/.test(userAgent)) return 'Safari';
+  return 'Unknown';
+}
 
 export function setupRoutes(app: Express) {
   // Simple handlers for now - in a real app these would use proper controllers
@@ -21,8 +32,8 @@ export function setupRoutes(app: Express) {
       };
       
       // Generate real JWT tokens
-      const accessToken = jwt.sign(userPayload, jwtSecret, { expiresIn: jwtExpiresIn });
-      const refreshToken = jwt.sign(userPayload, jwtSecret, { expiresIn: '7d' });
+      const accessToken = jwt.sign(userPayload, jwtSecret, { expiresIn: jwtExpiresIn as any });
+      const refreshToken = jwt.sign(userPayload, jwtSecret, { expiresIn: '7d' as any });
       
       res.status(201).json({ 
         message: 'Registration successful',
@@ -40,7 +51,7 @@ export function setupRoutes(app: Express) {
   
   app.post('/api/auth/login', (req, res) => {
     try {
-      const { email, password } = req.body;
+      const { email } = req.body;
       
       // For demo purposes, accept any email/password
       // In production, you would validate against a database
@@ -55,8 +66,8 @@ export function setupRoutes(app: Express) {
       };
       
       // Generate real JWT tokens
-      const accessToken = jwt.sign(userPayload, jwtSecret, { expiresIn: jwtExpiresIn });
-      const refreshToken = jwt.sign(userPayload, jwtSecret, { expiresIn: '7d' });
+      const accessToken = jwt.sign(userPayload, jwtSecret, { expiresIn: jwtExpiresIn as any });
+      const refreshToken = jwt.sign(userPayload, jwtSecret, { expiresIn: '7d' as any });
       
       res.json({ 
         message: 'Login successful',
@@ -92,16 +103,16 @@ export function setupRoutes(app: Express) {
       
       // Create new tokens with same payload
       const jwtExpiresIn = process.env.JWT_EXPIRES_IN || '24h';
-      const newAccessToken = jwt.sign(payload, jwtSecret, { expiresIn: jwtExpiresIn });
-      const newRefreshToken = jwt.sign(payload, jwtSecret, { expiresIn: '7d' });
+      const newAccessToken = jwt.sign(payload, jwtSecret, { expiresIn: jwtExpiresIn as any });
+      const newRefreshToken = jwt.sign(payload, jwtSecret, { expiresIn: '7d' as any });
       
-      res.json({ 
+      return res.json({ 
         message: 'Token refresh successful',
         tokens: { accessToken: newAccessToken, refreshToken: newRefreshToken }
       });
     } catch (error) {
       console.error('Refresh token error:', error);
-      res.status(500).json({ 
+      return res.status(500).json({ 
         error: 'Token refresh failed',
         message: error instanceof Error ? error.message : 'Unknown error'
       });
@@ -128,37 +139,152 @@ export function setupRoutes(app: Express) {
     console.log('Contact form submission:', req.body);
     
     try {
-      // No email sending from backend - emails are sent via FormSubmit from frontend
-      // Only database storage happens here
+      // Extract data from request
+      const { full_name, fullName, email, message, visitorIp, browser, country } = req.body;
+      
+      // Use either field name (full_name from frontend, fullName from backend)
+      const nameValue = full_name || fullName || '';
+      
+      // Get visitor information from headers
+      const clientIp = visitorIp || req.headers['x-forwarded-for'] || req.ip || 'unknown';
+      const userAgent = req.headers['user-agent'] || 'unknown';
+      const detectedBrowser = browser || parseBrowser(userAgent);
+      const detectedCountry = country || req.headers['cf-ipcountry'] || 'unknown';
+      
+      // Save to database
+      const contactMessage = await prisma.contactMessage.create({
+        data: {
+          fullName: nameValue,
+          email: email,
+          message: message,
+          visitorIp: clientIp,
+          browser: detectedBrowser,
+          country: Array.isArray(detectedCountry) ? detectedCountry[0] : detectedCountry,
+          status: 'new'
+        }
+      });
+      
+      console.log('Contact message saved to database:', contactMessage.id);
       
       res.status(201).json({ 
         success: true,
         message: 'Contact message submitted successfully',
-        id: 'contact-' + Date.now(),
+        id: contactMessage.id,
         emailSent: false, // No email sent from backend
         emailMessage: 'Email sending handled via FormSubmit from frontend'
       });
     } catch (error) {
       console.error('Contact submission error:', error);
-      res.status(201).json({ 
-        success: true,
-        message: 'Contact message submitted (backend storage only)',
-        id: 'contact-' + Date.now(),
-        emailSent: false,
-        emailMessage: 'Backend only handles storage - emails via FormSubmit from frontend'
+      res.status(500).json({ 
+        success: false,
+        message: 'Failed to save contact message to database',
+        error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   });
   
-  app.get('/api/contact', (_req, res) => {
-    // Temporarily allow without auth for testing
-    res.json({ 
-      messages: [
-        { id: 'contact-1', fullName: 'Test User', email: 'test@example.com', message: 'Hello!', status: 'read', createdAt: '2024-01-10' },
-        { id: 'contact-2', fullName: 'Another User', email: 'another@example.com', message: 'Need help', status: 'unread', createdAt: '2024-01-12' }
-      ],
-      pagination: { page: 1, limit: 20, total: 2, totalPages: 1 }
-    });
+  app.get('/api/contact', async (_req, res) => {
+    try {
+      // Fetch real contact messages from database
+      const messages = await prisma.contactMessage.findMany({
+        take: 50,
+        orderBy: { createdAt: 'desc' }
+      });
+      
+      res.json({ 
+        messages: messages.map(m => ({
+          id: m.id,
+          fullName: m.fullName,
+          email: m.email,
+          message: m.message,
+          status: m.status,
+          createdAt: m.createdAt.toISOString(),
+          visitorIp: m.visitorIp,
+          browser: m.browser,
+          country: m.country
+        })),
+        pagination: { page: 1, limit: 20, total: messages.length, totalPages: Math.ceil(messages.length / 20) }
+      });
+    } catch (error) {
+      console.error('Error fetching contact messages:', error);
+      res.status(500).json({ 
+        error: 'Failed to fetch contact messages',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Contact message update (mark as read, archive, etc.)
+  app.put('/api/contact/:id', authMiddleware(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      // Validate status
+      const validStatuses = ['new', 'read', 'archived'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ 
+          error: 'Invalid status',
+          message: `Status must be one of: ${validStatuses.join(', ')}`
+        });
+      }
+      
+      const updatedMessage = await prisma.contactMessage.update({
+        where: { id },
+        data: { status }
+      });
+      
+      res.json({ 
+        success: true,
+        message: 'Contact message updated successfully',
+        contactMessage: updatedMessage
+      });
+    } catch (error) {
+      console.error('Error updating contact message:', error);
+      
+      if (error.code === 'P2025') {
+        return res.status(404).json({ 
+          error: 'Contact message not found',
+          message: `No contact message found with ID: ${req.params.id}`
+        });
+      }
+      
+      res.status(500).json({ 
+        error: 'Failed to update contact message',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Contact message delete
+  app.delete('/api/contact/:id', authMiddleware(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const deletedMessage = await prisma.contactMessage.delete({
+        where: { id }
+      });
+      
+      res.json({ 
+        success: true,
+        message: 'Contact message deleted successfully',
+        contactMessage: deletedMessage
+      });
+    } catch (error) {
+      console.error('Error deleting contact message:', error);
+      
+      if (error.code === 'P2025') {
+        return res.status(404).json({ 
+          error: 'Contact message not found',
+          message: `No contact message found with ID: ${req.params.id}`
+        });
+      }
+      
+      res.status(500).json({ 
+        error: 'Failed to delete contact message',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
   });
 
   // Meeting routes
@@ -177,31 +303,57 @@ export function setupRoutes(app: Express) {
         notes: req.body.notes || ''
       };
 
-      // No email sending from backend - emails are sent via FormSubmit from frontend
-      // Only database storage happens here
+      // Get visitor information
+      const forwardedFor = req.headers['x-forwarded-for'];
+      let clientIp = 'unknown';
+      if (forwardedFor) {
+        clientIp = Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor.split(',')[0].trim();
+      } else if (req.ip) {
+        clientIp = req.ip;
+      }
+      const userAgent = req.headers['user-agent'] || 'unknown';
+      const detectedBrowser = parseBrowser(userAgent);
+      const detectedCountry = req.headers['cf-ipcountry'] || 'unknown';
+
+      // Save to database
+      const meetingRequest = await prisma.meetingRequest.create({
+        data: {
+          customerName: meetingData.customerName,
+          email: meetingData.email,
+          company: meetingData.company,
+          meetingTopic: meetingData.meetingTopic,
+          requestedDate: meetingData.requestedDate,
+          requestedTime: meetingData.requestedTime,
+          notes: meetingData.notes,
+          visitorIp: clientIp,
+          browser: detectedBrowser,
+          country: Array.isArray(detectedCountry) ? detectedCountry[0] : detectedCountry,
+          status: 'pending'
+        }
+      });
+      
+      console.log('Meeting request saved to database:', meetingRequest.id);
 
       res.status(201).json({ 
         success: true,
         message: 'Meeting request submitted successfully',
-        id: 'meeting-' + Date.now(),
+        id: meetingRequest.id,
         emailSent: false, // No email sent from backend
         emailMessage: 'Email sending handled via FormSubmit from frontend',
         meeting: {
-          id: 'meeting-' + Date.now(),
+          id: meetingRequest.id,
           ...meetingData,
           status: 'pending'
         }
       });
     } catch (error) {
       console.error('Meeting submission error:', error);
-      res.status(201).json({ 
-        success: true,
-        message: 'Meeting request submitted (backend storage only)',
-        id: 'meeting-' + Date.now(),
-        emailSent: false,
-        emailMessage: 'Backend only handles storage - emails via FormSubmit from frontend',
+      res.status(500).json({ 
+        success: false,
+        message: 'Failed to save meeting request to database',
+        error: error instanceof Error ? error.message : 'Unknown error',
         meeting: {
-          id: 'meeting-' + Date.now(),
+          id: 'error-' + Date.now(),
           customerName: req.body.customer_name || req.body.customerName || 'Unknown',
           email: req.body.email || 'unknown@example.com',
           meetingTopic: req.body.meeting_topic || req.body.meetingTopic || req.body.topic || 'General Discussion',
@@ -213,15 +365,216 @@ export function setupRoutes(app: Express) {
     }
   });
   
-  app.get('/api/meeting', (_req, res) => {
-    // Temporarily allow without auth for testing
-    res.json({ 
-      meetings: [
-        { id: 'meeting-1', customerName: 'John Doe', email: 'john@example.com', meetingTopic: 'Project Discussion', status: 'pending', requestedDate: '2024-01-15' },
-        { id: 'meeting-2', customerName: 'Jane Smith', email: 'jane@example.com', meetingTopic: 'Consultation', status: 'accepted', requestedDate: '2024-01-16' }
-      ],
-      pagination: { page: 1, limit: 20, total: 2, totalPages: 1 }
-    });
+  app.get('/api/meeting', async (_req, res) => {
+    try {
+      // Fetch real meeting requests from database
+      const meetings = await prisma.meetingRequest.findMany({
+        take: 50,
+        orderBy: { createdAt: 'desc' }
+      });
+      
+      res.json({ 
+        meetings: meetings.map(m => ({
+          id: m.id,
+          customerName: m.customerName,
+          email: m.email,
+          meetingTopic: m.meetingTopic,
+          status: m.status,
+          requestedDate: m.requestedDate,
+          requestedTime: m.requestedTime,
+          company: m.company,
+          notes: m.notes,
+          createdAt: m.createdAt.toISOString()
+        })),
+        pagination: { page: 1, limit: 20, total: meetings.length, totalPages: Math.ceil(meetings.length / 20) }
+      });
+    } catch (error) {
+      console.error('Error fetching meetings:', error);
+      res.status(500).json({ 
+        error: 'Failed to fetch meeting requests',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Meeting request update (accept/reject/complete, update admin notes)
+  app.put('/api/meeting/:id', authMiddleware(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { 
+        status, 
+        acceptedDate, 
+        acceptedTime, 
+        meetLink, 
+        adminMessage, 
+        adminNotes 
+      } = req.body;
+      
+      // Validate status if provided
+      const validStatuses = ['pending', 'accepted', 'rejected', 'completed'];
+      if (status && !validStatuses.includes(status)) {
+        return res.status(400).json({ 
+          error: 'Invalid status',
+          message: `Status must be one of: ${validStatuses.join(', ')}`
+        });
+      }
+      
+      const updateData: any = {};
+      if (status) updateData.status = status;
+      if (acceptedDate !== undefined) updateData.acceptedDate = acceptedDate;
+      if (acceptedTime !== undefined) updateData.acceptedTime = acceptedTime;
+      if (meetLink !== undefined) updateData.meetLink = meetLink;
+      if (adminMessage !== undefined) updateData.adminMessage = adminMessage;
+      if (adminNotes !== undefined) updateData.adminNotes = adminNotes;
+      
+      const updatedMeeting = await prisma.meetingRequest.update({
+        where: { id },
+        data: updateData
+      });
+      
+      res.json({ 
+        success: true,
+        message: 'Meeting request updated successfully',
+        meeting: {
+          id: updatedMeeting.id,
+          customerName: updatedMeeting.customerName,
+          email: updatedMeeting.email,
+          meetingTopic: updatedMeeting.meetingTopic,
+          status: updatedMeeting.status,
+          requestedDate: updatedMeeting.requestedDate,
+          requestedTime: updatedMeeting.requestedTime,
+          company: updatedMeeting.company,
+          notes: updatedMeeting.notes,
+          acceptedDate: updatedMeeting.acceptedDate,
+          acceptedTime: updatedMeeting.acceptedTime,
+          meetLink: updatedMeeting.meetLink,
+          adminMessage: updatedMeeting.adminMessage,
+          adminNotes: updatedMeeting.adminNotes,
+          createdAt: updatedMeeting.createdAt.toISOString()
+        }
+      });
+    } catch (error) {
+      console.error('Error updating meeting request:', error);
+      
+      if (error.code === 'P2025') {
+        return res.status(404).json({ 
+          error: 'Meeting request not found',
+          message: `No meeting request found with ID: ${req.params.id}`
+        });
+      }
+      
+      res.status(500).json({ 
+        error: 'Failed to update meeting request',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Meeting request respond endpoint (accept/reject with email response)
+  app.post('/api/meeting/:id/respond', authMiddleware(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { action, acceptedDate, acceptedTime, meetLink, adminMessage } = req.body;
+      
+      if (!['accepted', 'rejected'].includes(action)) {
+        return res.status(400).json({ 
+          error: 'Invalid action',
+          message: 'Action must be either "accepted" or "rejected"'
+        });
+      }
+      
+      const updateData: any = {
+        status: action
+      };
+      
+      if (action === 'accepted') {
+        if (!acceptedDate || !acceptedTime) {
+          return res.status(400).json({ 
+            error: 'Missing required fields',
+            message: 'Accepted date and time are required when accepting a meeting'
+          });
+        }
+        updateData.acceptedDate = acceptedDate;
+        updateData.acceptedTime = acceptedTime;
+        if (meetLink) updateData.meetLink = meetLink;
+        if (adminMessage) updateData.adminMessage = adminMessage;
+      }
+      
+      const updatedMeeting = await prisma.meetingRequest.update({
+        where: { id },
+        data: updateData
+      });
+      
+      // Generate email content
+      const emailBody = action === 'accepted' 
+        ? `Dear ${updatedMeeting.customerName},\n\nThank you for your meeting request about "${updatedMeeting.meetingTopic}".\n\nYour meeting has been accepted and scheduled for:\nDate: ${acceptedDate}\nTime: ${acceptedTime}\n\n${meetLink ? `Meeting Link: ${meetLink}\n\n` : ''}${adminMessage ? `Additional Notes: ${adminMessage}\n\n` : ''}Please let us know if you need to reschedule.\n\nBest regards,\nYour Team`
+        : `Dear ${updatedMeeting.customerName},\n\nThank you for your meeting request about "${updatedMeeting.meetingTopic}".\n\nUnfortunately, we are unable to schedule this meeting at the requested time due to prior commitments. We apologize for any inconvenience.\n\nPlease feel free to submit another request with alternative dates/times, or contact us directly for other inquiries.\n\nBest regards,\nYour Team`;
+      
+      res.json({ 
+        success: true,
+        message: `Meeting ${action} successfully`,
+        emailSent: false, // No actual email sent from backend
+        emailBody: emailBody,
+        emailSubject: action === 'accepted' 
+          ? `Meeting Accepted: ${updatedMeeting.meetingTopic}` 
+          : `Meeting Rescheduling Request: ${updatedMeeting.meetingTopic}`,
+        meeting: {
+          id: updatedMeeting.id,
+          status: updatedMeeting.status,
+          ...(action === 'accepted' ? {
+            acceptedDate: updatedMeeting.acceptedDate,
+            acceptedTime: updatedMeeting.acceptedTime,
+            meetLink: updatedMeeting.meetLink,
+            adminMessage: updatedMeeting.adminMessage
+          } : {})
+        }
+      });
+    } catch (error) {
+      console.error('Error responding to meeting request:', error);
+      
+      if (error.code === 'P2025') {
+        return res.status(404).json({ 
+          error: 'Meeting request not found',
+          message: `No meeting request found with ID: ${req.params.id}`
+        });
+      }
+      
+      res.status(500).json({ 
+        error: 'Failed to respond to meeting request',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Meeting request delete
+  app.delete('/api/meeting/:id', authMiddleware(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const deletedMeeting = await prisma.meetingRequest.delete({
+        where: { id }
+      });
+      
+      res.json({ 
+        success: true,
+        message: 'Meeting request deleted successfully',
+        meeting: deletedMeeting
+      });
+    } catch (error) {
+      console.error('Error deleting meeting request:', error);
+      
+      if (error.code === 'P2025') {
+        return res.status(404).json({ 
+          error: 'Meeting request not found',
+          message: `No meeting request found with ID: ${req.params.id}`
+        });
+      }
+      
+      res.status(500).json({ 
+        error: 'Failed to delete meeting request',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
   });
 
   // Availability routes
@@ -258,7 +611,7 @@ export function setupRoutes(app: Express) {
   });
 
   // Admin routes - temporarily allow access without auth for testing
-  app.get('/api/admin/data', (req, res) => {
+  app.get('/api/admin/data', async (req, res) => {
     // For testing, allow access without auth
     // In production, use: authMiddleware('admin')
     
@@ -274,44 +627,191 @@ export function setupRoutes(app: Express) {
         userRole = decoded.role || 'user';
       } catch (error) {
         // Token invalid, but we still allow access for testing
-        console.debug('Invalid token for admin data:', error.message);
+        console.debug('Invalid token for admin data:', error instanceof Error ? error.message : 'Unknown error');
       }
     }
     
     console.log(`Admin data requested by role: ${userRole}`);
     
-    res.json({ 
-      statistics: {
-        visitors: { total: 42, uniqueCountries: 5 },
-        meetings: { total: 18, byStatus: { pending: 12, accepted: 4, declined: 2 }, upcoming: 4 },
-        messages: { total: 56, byStatus: { unread: 8, read: 32, archived: 16 }, unread: 8 },
-        users: { total: 3, byRole: { admin: 1, user: 2 } },
-        overview: { totalRecords: 119, growthRate: 12.5 }
-      },
-      recentData: { 
-        visitors: [
-          { id: 'visitor-1', country: 'US', browser: 'Chrome', visitCount: 5 },
-          { id: 'visitor-2', country: 'UK', browser: 'Firefox', visitCount: 3 },
-          { id: 'visitor-3', country: 'CA', browser: 'Safari', visitCount: 2 }
-        ], 
-        meetings: [
-          { id: 'meeting-1', customerName: 'John Smith', status: 'pending', requestedDate: '2024-01-15' },
-          { id: 'meeting-2', customerName: 'Jane Doe', status: 'accepted', requestedDate: '2024-01-16' }
-        ], 
-        messages: [
-          { id: 'msg-1', fullName: 'Alice Johnson', email: 'alice@example.com', status: 'unread' },
-          { id: 'msg-2', fullName: 'Bob Wilson', email: 'bob@example.com', status: 'read' }
-        ] 
-      },
-      summary: { 
-        totalVisitors: 42, 
-        totalMeetings: 18, 
-        totalMessages: 56, 
-        totalUsers: 3,
-        requestTime: new Date().toISOString(),
-        userRole: userRole
-      }
-    });
+    try {
+      // Fetch REAL data from database
+      const [visitors, meetings, messages, visitorStats, uniqueCountriesResult, meetingStats, messageStats] = await Promise.all([
+        // Get visitors (limit to 50 for performance)
+        prisma.visitor.findMany({
+          take: 50,
+          orderBy: { createdAt: 'desc' }
+        }),
+        
+        // Get meetings (limit to 50 for performance)
+        prisma.meetingRequest.findMany({
+          take: 50,
+          orderBy: { createdAt: 'desc' }
+        }),
+        
+        // Get contact messages (limit to 50 for performance)
+        prisma.contactMessage.findMany({
+          take: 50,
+          orderBy: { createdAt: 'desc' }
+        }),
+        
+        // Get visitor statistics - count total visitors
+        prisma.visitor.aggregate({
+          _count: { id: true },
+        }),
+        
+        // Get unique countries count
+        prisma.visitor.findMany({
+          select: { country: true },
+          distinct: ['country']
+        }),
+        
+        // Get meeting statistics
+        prisma.meetingRequest.groupBy({
+          by: ['status'],
+          _count: { id: true }
+        }),
+        
+        // Get message statistics
+        prisma.contactMessage.groupBy({
+          by: ['status'],
+          _count: { id: true }
+        })
+      ]);
+      
+      // Calculate statistics
+      const totalVisitors = visitorStats._count.id;
+      const uniqueCountries = uniqueCountriesResult.length;
+      
+      const meetingStatusCounts = meetingStats.reduce((acc, item) => {
+        acc[item.status] = item._count.id;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      const totalMeetings = Object.values(meetingStatusCounts).reduce((sum, count) => sum + count, 0);
+      
+      const messageStatusCounts = messageStats.reduce((acc, item) => {
+        acc[item.status] = item._count.id;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      const totalMessages = Object.values(messageStatusCounts).reduce((sum, count) => sum + count, 0);
+      
+      // Calculate upcoming meetings (next 7 days)
+      const today = new Date();
+      const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const upcomingMeetings = meetings.filter(meeting => {
+        try {
+          const meetingDate = new Date(meeting.requestedDate);
+          return meetingDate >= today && meetingDate <= nextWeek && meeting.status === 'accepted';
+        } catch {
+          return false;
+        }
+      }).length;
+      
+      // Calculate unread messages
+      const unreadMessages = messageStatusCounts['new'] || 0;
+      
+      // Get user statistics
+      const userStats = await prisma.user.groupBy({
+        by: ['role'],
+        _count: { id: true }
+      });
+      
+      const userRoleCounts = userStats.reduce((acc, item) => {
+        acc[item.role] = item._count.id;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      const totalUsers = Object.values(userRoleCounts).reduce((sum, count) => sum + count, 0);
+      
+      // Prepare response data
+      const responseData = {
+        visitors: visitors.map(v => ({
+          id: v.id,
+          visitorId: v.visitorId,
+          country: v.country || 'Unknown',
+          browser: v.browser || 'Unknown',
+          visitCount: v.visitCount,
+          os: v.os || 'Unknown',
+          device: v.device || 'Unknown',
+          lastVisit: v.updatedAt.toISOString(),
+          email: v.email || '',
+          name: v.name || '',
+          visitorIp: v.visitorIp || '',
+          createdAt: v.createdAt.toISOString()
+        })),
+        meetings: meetings.map(m => ({
+          id: m.id,
+          customerName: m.customerName,
+          email: m.email,
+          company: m.company || '',
+          status: m.status,
+          requestedDate: m.requestedDate,
+          requestedTime: m.requestedTime,
+          meetingTopic: m.meetingTopic,
+          notes: m.notes || '',
+          visitorIp: m.visitorIp || '',
+          browser: m.browser || '',
+          country: m.country || '',
+          createdAt: m.createdAt.toISOString(),
+          updatedAt: m.updatedAt.toISOString(),
+          acceptedDate: m.acceptedDate,
+          acceptedTime: m.acceptedTime,
+          meetLink: m.meetLink,
+          adminMessage: m.adminMessage,
+          adminNotes: m.adminNotes
+        })),
+        messages: messages.map(m => ({
+          id: m.id,
+          fullName: m.fullName,
+          email: m.email,
+          status: m.status,
+          message: m.message,
+          visitorIp: m.visitorIp || '',
+          browser: m.browser || '',
+          country: m.country || '',
+          createdAt: m.createdAt.toISOString(),
+          updatedAt: m.updatedAt.toISOString()
+        })),
+        statistics: {
+          visitors: { total: totalVisitors, uniqueCountries },
+          meetings: { 
+            total: totalMeetings, 
+            byStatus: meetingStatusCounts, 
+            upcoming: upcomingMeetings 
+          },
+          messages: { 
+            total: totalMessages, 
+            byStatus: messageStatusCounts, 
+            unread: unreadMessages 
+          },
+          users: { total: totalUsers, byRole: userRoleCounts },
+          overview: { 
+            totalRecords: totalVisitors + totalMeetings + totalMessages + totalUsers,
+            growthRate: 0 // Would need historical data to calculate
+          }
+        },
+        summary: { 
+          totalVisitors, 
+          totalMeetings, 
+          totalMessages, 
+          totalUsers,
+          requestTime: new Date().toISOString(),
+          userRole: userRole
+        }
+      };
+      
+      console.log(`Returning real data: ${visitors.length} visitors, ${meetings.length} meetings, ${messages.length} messages`);
+      
+      res.json(responseData);
+      
+    } catch (error) {
+      console.error('Error fetching admin data:', error);
+      res.status(500).json({ 
+        error: 'Failed to fetch admin data',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
   });
 
   // Email functionality is handled via FormSubmit from frontend

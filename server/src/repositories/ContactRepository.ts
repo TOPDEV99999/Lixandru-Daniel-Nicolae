@@ -1,5 +1,5 @@
 import { BaseRepository } from './BaseRepository';
-import { ContactMessage } from '../generated/prisma';
+import { ContactMessage } from '@prisma/client';
 
 export interface CreateContactMessageDto {
   fullName: string;

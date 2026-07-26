@@ -36,9 +36,22 @@ export default function Admin() {
     setLoadingData(true);
     try {
       const response = await localAPI.admin.getAdminData();
-      setData(response || { visitors: [], meetings: [], messages: [] });
-    } catch {
-      // ignore
+      console.log('Admin data response:', response);
+      
+      // Make sure response has the expected structure
+      const safeData = {
+        visitors: Array.isArray(response?.visitors) ? response.visitors : [],
+        meetings: Array.isArray(response?.meetings) ? response.meetings : [],
+        messages: Array.isArray(response?.messages) ? response.messages : [],
+        statistics: response?.statistics || {},
+        summary: response?.summary || {}
+      };
+      
+      setData(safeData);
+    } catch (error) {
+      console.error('Failed to load admin data:', error);
+      // Set empty data structure
+      setData({ visitors: [], meetings: [], messages: [], statistics: {}, summary: {} });
     }
     setLoadingData(false);
   };
@@ -50,21 +63,21 @@ export default function Admin() {
   const updateMeeting = (id, updates) => {
     setData(prev => ({
       ...prev,
-      meetings: prev.meetings.map(m => m.id === id ? { ...m, ...updates } : m)
+      meetings: Array.isArray(prev?.meetings) ? prev.meetings.map(m => m?.id === id ? { ...m, ...updates } : m) : []
     }));
   };
 
   const updateMessage = (id, updates) => {
     setData(prev => ({
       ...prev,
-      messages: prev.messages.map(m => m.id === id ? { ...m, ...updates } : m)
+      messages: Array.isArray(prev?.messages) ? prev.messages.map(m => m?.id === id ? { ...m, ...updates } : m) : []
     }));
   };
 
   const deleteMessage = (id) => {
     setData(prev => ({
       ...prev,
-      messages: prev.messages.filter(m => m.id !== id)
+      messages: Array.isArray(prev?.messages) ? prev.messages.filter(m => m?.id !== id) : []
     }));
   };
 
@@ -144,12 +157,12 @@ export default function Admin() {
             >
               <tab.icon className="w-4 h-4" />
               {tab.label}
-              {tab.id === "meetings" && data.meetings.filter(m => m.status === "pending").length > 0 && (
+              {tab.id === "meetings" && data?.meetings?.filter(m => m?.status === "pending").length > 0 && (
                 <span className="px-1.5 py-0.5 rounded-md bg-primary/20 text-primary text-[10px] font-bold">
                   {data.meetings.filter(m => m.status === "pending").length}
                 </span>
               )}
-              {tab.id === "messages" && data.messages.filter(m => m.status === "new").length > 0 && (
+              {tab.id === "messages" && data?.messages?.filter(m => m?.status === "new").length > 0 && (
                 <span className="px-1.5 py-0.5 rounded-md bg-blue-500/20 text-blue-500 text-[10px] font-bold">
                   {data.messages.filter(m => m.status === "new").length}
                 </span>
@@ -172,13 +185,13 @@ export default function Admin() {
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
             >
-              {activeTab === "visitors" && <VisitorAnalytics visitors={data.visitors} />}
+              {activeTab === "visitors" && <VisitorAnalytics visitors={data?.visitors || []} />}
               {activeTab === "meetings" && (
-                <MeetingManagement meetings={data.meetings} onUpdateMeeting={updateMeeting} />
+                <MeetingManagement meetings={data?.meetings || []} onUpdateMeeting={updateMeeting} />
               )}
               {activeTab === "messages" && (
                 <ContactManagement 
-                  messages={data.messages} 
+                  messages={data?.messages || []} 
                   onUpdateMessage={updateMessage}
                   onDeleteMessage={deleteMessage}
                 />

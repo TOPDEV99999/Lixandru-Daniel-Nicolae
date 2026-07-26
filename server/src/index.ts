@@ -17,11 +17,9 @@ const corsOptions = {
   credentials: true,
   optionsSuccessStatus: 200
 };
-// console.log("323232");
 
 // Middleware
-// app.use(cors(corsOptions));
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(helmet());
 
 app.use(morgan('dev'));

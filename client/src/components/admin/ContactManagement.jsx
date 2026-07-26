@@ -7,8 +7,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
-const db = globalThis.__B44_DB__ || { auth:{ isAuthenticated: async()=>false, me: async()=>null }, entities:new Proxy({}, { get:()=>({ filter:async()=>[], get:async()=>null, create:async()=>({}), update:async()=>({}), delete:async()=>({}) }) }), integrations:{ Core:{ UploadFile:async()=>({ file_url:'' }) } } };
+import { localAPI } from "@/api/localClient";
 
 export default function ContactManagement({ messages = [], onUpdateMessage, onDeleteMessage }) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -43,7 +42,7 @@ export default function ContactManagement({ messages = [], onUpdateMessage, onDe
   const handleMarkAsRead = async (messageId) => {
     try {
       setIsLoading(true);
-      await db.entities.ContactMessage.update(messageId, { status: "read" });
+      await localAPI.contact.updateContactStatus(messageId, { status: "read" });
       onUpdateMessage?.(messageId, { status: "read" });
       toast({ title: "Marked as read" });
     } catch (error) {
@@ -57,7 +56,7 @@ export default function ContactManagement({ messages = [], onUpdateMessage, onDe
   const handleArchive = async (messageId) => {
     try {
       setIsLoading(true);
-      await db.entities.ContactMessage.update(messageId, { status: "archived" });
+      await localAPI.contact.updateContactStatus(messageId, { status: "archived" });
       onUpdateMessage?.(messageId, { status: "archived" });
       toast({ title: "Archived" });
     } catch (error) {
@@ -73,7 +72,7 @@ export default function ContactManagement({ messages = [], onUpdateMessage, onDe
     
     try {
       setIsLoading(true);
-      await db.entities.ContactMessage.delete(messageId);
+      await localAPI.contact.deleteContactMessage(messageId);
       onDeleteMessage?.(messageId);
       toast({ title: "Message deleted" });
       if (viewMessage?.id === messageId) {
