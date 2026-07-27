@@ -13,6 +13,8 @@ export default function ContactManagement({ messages = [], onUpdateMessage, onDe
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [viewMessage, setViewMessage] = useState(null);
+  const [replyMessage, setReplyMessage] = useState(null);
+  const [replyContent, setReplyContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -86,8 +88,63 @@ export default function ContactManagement({ messages = [], onUpdateMessage, onDe
     }
   };
 
-  const handleReply = (email) => {
-    window.location.href = `mailto:${email}`;
+  const handleReply = (message) => {
+    setReplyMessage(message);
+    setReplyContent(`Dear ${message.fullName},\n\nThank you for your message. `);
+  };
+
+  const sendReply = async () => {
+    if (!replyMessage || !replyContent.trim()) {
+      toast({ title: "Message is required", variant: "destructive" });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Send via FormSubmit
+      const formData = new FormData();
+      formData.append('_replyto', replyMessage.email);
+      formData.append('message', replyContent);
+      formData.append('_subject', `Re: Your message to ${replyMessage.fullName}`);
+      
+      const response = await fetch('https://formsubmit.co/ajax/uhajucewog80@gmail.com', {
+        method: 'POST',
+        body: formData
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        toast({ 
+          title: "Reply sent!", 
+          description: "Email has been sent via FormSubmit" 
+        });
+        
+        // Mark as read if it was new
+        if (replyMessage.status === 'new') {
+          await localAPI.contact.updateContactStatus(replyMessage.id, { status: 'read' });
+          onUpdateMessage?.(replyMessage.id, { status: 'read' });
+        }
+        
+        setReplyMessage(null);
+        setReplyContent("");
+      } else {
+        toast({ 
+          title: "Failed to send reply", 
+          description: result.message || "Please try again", 
+          variant: "destructive" 
+        });
+      }
+    } catch (error) {
+      console.error("Error sending reply:", error);
+      toast({ 
+        title: "Failed to send reply", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const stats = {
@@ -312,7 +369,7 @@ export default function ContactManagement({ messages = [], onUpdateMessage, onDe
                       className="border-primary/30 text-primary hover:bg-primary/10"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleReply(message.email);
+                        handleReply(message);
                       }}
                     >
                       <ExternalLink className="w-3 h-3 mr-1" />
@@ -423,7 +480,7 @@ export default function ContactManagement({ messages = [], onUpdateMessage, onDe
                 
                 <Button
                   variant="outline"
-                  onClick={() => handleReply(viewMessage.email)}
+                  onClick={() => handleReply(viewMessage)}
                 >
                   <ExternalLink className="w-4 h-4 mr-2" />
                   Reply via Email
@@ -447,6 +504,92 @@ export default function ContactManagement({ messages = [], onUpdateMessage, onDe
                 onClick={() => setViewMessage(null)}
               >
                 Close
+              </Button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* Reply Modal */}
+      {replyMessage && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+          onClick={() => setReplyMessage(null)}
+        >
+          <motion.div
+            initial={{ scale: 0.95 }}
+            animate={{ scale: 1 }}
+            className="glass rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden border border-border"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 border-b border-border">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-heading font-bold text-foreground text-lg">Reply to {replyMessage.fullName}</h3>
+                  <p className="text-sm text-muted-foreground">{replyMessage.email}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setReplyMessage(null)}
+                  className="h-8 w-8 p-0"
+                >
+                  ✕
+                </Button>
+              </div>
+            </div>
+            
+            <div className="p-6 overflow-y-auto max-h-[50vh]">
+              <div className="mb-4">
+                <h4 className="text-xs font-medium text-muted-foreground mb-2">Original Message</h4>
+                <div className="p-3 rounded-lg bg-muted/20 border border-border text-sm">
+                  <p className="text-foreground whitespace-pre-wrap">{replyMessage.message}</p>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">
+                    Your Reply
+                  </label>
+                  <textarea
+                    value={replyContent}
+                    onChange={(e) => setReplyContent(e.target.value)}
+                    className="w-full min-h-[200px] p-3 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    placeholder="Type your reply here..."
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                  <div>
+                    <p className="font-medium">Email will be sent via FormSubmit</p>
+                    <p>Recipient: {replyMessage.email}</p>
+                  </div>
+                  <div className="text-right">
+                    <p>Status: {replyMessage.status === 'new' ? 'Will also mark as read' : 'Current status unchanged'}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-4 border-t border-border flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setReplyMessage(null);
+                  setReplyContent("");
+                }}
+                disabled={isLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={sendReply}
+                disabled={isLoading}
+              >
+                {isLoading ? "Sending..." : "Send Reply via Email"}
               </Button>
             </div>
           </motion.div>

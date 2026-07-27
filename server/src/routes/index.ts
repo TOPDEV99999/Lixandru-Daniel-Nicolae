@@ -1,5 +1,6 @@
 import { Express } from 'express';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
 import { prisma } from '../lib/prisma';
 import { authMiddleware } from '../middleware/authMiddleware';
 
@@ -17,27 +18,98 @@ export function setupRoutes(app: Express) {
   // Simple handlers for now - in a real app these would use proper controllers
 
   // Auth routes
-  app.post('/api/auth/register', (req, res) => {
+  app.post('/api/auth/register', async (req, res) => {
     try {
-      const { email } = req.body;
+      const { email, password, name } = req.body;
+      
+      // Validate required fields
+      if (!email || !password) {
+        return res.status(400).json({ 
+          error: 'Validation error',
+          message: 'Email and password are required'
+        });
+      }
+      
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ 
+          error: 'Validation error',
+          message: 'Invalid email format'
+        });
+      }
+      
+      // Additional email validation - check for common disposable email domains
+      const disposableDomains = [
+        'tempmail.com', 'throwaway.com', 'fake.com', 'example.com', 
+        'test.com', 'mailinator.com', 'guerrillamail.com', 'yopmail.com'
+      ];
+      
+      const emailDomain = email.split('@')[1].toLowerCase();
+      if (disposableDomains.some(domain => emailDomain.includes(domain))) {
+        return res.status(400).json({ 
+          error: 'Validation error',
+          message: 'Disposable email addresses are not allowed'
+        });
+      }
+      
+      // Validate password strength (minimum 8 characters, at least 1 letter and 1 number)
+      const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,}$/;
+      if (!passwordRegex.test(password)) {
+        return res.status(400).json({ 
+          error: 'Validation error',
+          message: 'Password must be at least 8 characters long and contain at least 1 letter and 1 number'
+        });
+      }
+      
+      // Check if user already exists
+      const existingUser = await prisma.user.findUnique({
+        where: { email }
+      });
+      
+      if (existingUser) {
+        return res.status(409).json({ 
+          error: 'User already exists',
+          message: 'A user with this email already exists'
+        });
+      }
+      
+      // Hash password
+      const saltRounds = 10;
+      const passwordHash = await bcrypt.hash(password, saltRounds);
+      
+      // Create user in database
+      const newUser = await prisma.user.create({
+        data: {
+          email,
+          passwordHash,
+          name: name || '',
+          role: 'user' // Default role
+        }
+      });
       
       const jwtSecret = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
       const jwtExpiresIn = process.env.JWT_EXPIRES_IN || '24h';
       
-      // Create user payload
+      // Create user payload for JWT
       const userPayload = {
-        userId: 'new-user-id-' + Date.now(),
-        email: email || 'newuser@example.com',
-        role: 'user'
+        userId: newUser.id,
+        email: newUser.email,
+        role: newUser.role
       };
       
-      // Generate real JWT tokens
+      // Generate JWT tokens
       const accessToken = jwt.sign(userPayload, jwtSecret, { expiresIn: jwtExpiresIn as any });
       const refreshToken = jwt.sign(userPayload, jwtSecret, { expiresIn: '7d' as any });
       
       res.status(201).json({ 
         message: 'Registration successful',
-        user: userPayload,
+        user: {
+          id: newUser.id,
+          email: newUser.email,
+          name: newUser.name,
+          role: newUser.role
+        },
         tokens: { accessToken, refreshToken }
       });
     } catch (error) {
@@ -49,29 +121,73 @@ export function setupRoutes(app: Express) {
     }
   });
   
-  app.post('/api/auth/login', (req, res) => {
+  app.post('/api/auth/login', async (req, res) => {
     try {
-      const { email } = req.body;
+      const { email, password } = req.body;
       
-      // For demo purposes, accept any email/password
-      // In production, you would validate against a database
+      // Validate required fields
+      if (!email || !password) {
+        return res.status(400).json({ 
+          error: 'Validation error',
+          message: 'Email and password are required'
+        });
+      }
+      
+      // Basic email format validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ 
+          error: 'Validation error',
+          message: 'Invalid email format'
+        });
+      }
+      
+      // Find user in database
+      const user = await prisma.user.findUnique({
+        where: { email }
+      });
+      
+      if (!user) {
+        console.log(`Login failed: User not found for email ${email}`);
+        return res.status(401).json({ 
+          error: 'Authentication failed',
+          message: 'Invalid email or password'
+        });
+      }
+      
+      // Verify password
+      const passwordValid = await bcrypt.compare(password, user.passwordHash);
+      
+      if (!passwordValid) {
+        console.log(`Login failed: Invalid password for email ${email}`);
+        return res.status(401).json({ 
+          error: 'Authentication failed',
+          message: 'Invalid email or password'
+        });
+      }
+      
       const jwtSecret = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
       const jwtExpiresIn = process.env.JWT_EXPIRES_IN || '24h';
       
       // Create user payload
       const userPayload = {
-        userId: 'demo-user-id',
-        email: email || 'demo@example.com',
-        role: 'admin' // Set to admin for testing dashboard access
+        userId: user.id,
+        email: user.email,
+        role: user.role
       };
       
-      // Generate real JWT tokens
+      // Generate JWT tokens
       const accessToken = jwt.sign(userPayload, jwtSecret, { expiresIn: jwtExpiresIn as any });
       const refreshToken = jwt.sign(userPayload, jwtSecret, { expiresIn: '7d' as any });
       
       res.json({ 
         message: 'Login successful',
-        user: userPayload,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role
+        },
         tokens: { accessToken, refreshToken }
       });
     } catch (error) {
@@ -119,10 +235,52 @@ export function setupRoutes(app: Express) {
     }
   });
   
-  app.get('/api/auth/me', authMiddleware(), (req, res) => {
-    res.json({ 
-      user: (req as any).user || { id: 'temp-id', email: 'test@example.com', role: 'user' }
-    });
+  app.get('/api/auth/me', authMiddleware(), async (req, res) => {
+    try {
+      const userPayload = (req as any).user;
+      
+      if (!userPayload?.userId) {
+        return res.status(401).json({ 
+          error: 'Unauthorized',
+          message: 'User not authenticated'
+        });
+      }
+      
+      // Get user from database
+      const user = await prisma.user.findUnique({
+        where: { id: userPayload.userId },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          createdAt: true
+        }
+      });
+      
+      if (!user) {
+        return res.status(404).json({ 
+          error: 'User not found',
+          message: 'User account no longer exists'
+        });
+      }
+      
+      res.json({ 
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          created_at: user.createdAt.toISOString()
+        }
+      });
+    } catch (error) {
+      console.error('Error getting user profile:', error);
+      res.status(500).json({ 
+        error: 'Failed to get user profile',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
   });
   
   app.put('/api/auth/profile', authMiddleware(), (req, res) => {
@@ -198,8 +356,8 @@ export function setupRoutes(app: Express) {
           email: m.email,
           message: m.message,
           status: m.status,
-          createdAt: m.createdAt.toISOString(),
-          visitorIp: m.visitorIp,
+          created_at: m.createdAt.toISOString(),
+          visitor_ip: m.visitorIp,
           browser: m.browser,
           country: m.country
         })),
@@ -376,15 +534,15 @@ export function setupRoutes(app: Express) {
       res.json({ 
         meetings: meetings.map(m => ({
           id: m.id,
-          customerName: m.customerName,
+          customer_name: m.customerName,
           email: m.email,
-          meetingTopic: m.meetingTopic,
+          meeting_topic: m.meetingTopic,
           status: m.status,
-          requestedDate: m.requestedDate,
-          requestedTime: m.requestedTime,
+          requested_date: m.requestedDate,
+          requested_time: m.requestedTime,
           company: m.company,
           notes: m.notes,
-          createdAt: m.createdAt.toISOString()
+          created_at: m.createdAt.toISOString()
         })),
         pagination: { page: 1, limit: 20, total: meetings.length, totalPages: Math.ceil(meetings.length / 20) }
       });
@@ -437,20 +595,20 @@ export function setupRoutes(app: Express) {
         message: 'Meeting request updated successfully',
         meeting: {
           id: updatedMeeting.id,
-          customerName: updatedMeeting.customerName,
+          customer_name: updatedMeeting.customerName,
           email: updatedMeeting.email,
-          meetingTopic: updatedMeeting.meetingTopic,
+          meeting_topic: updatedMeeting.meetingTopic,
           status: updatedMeeting.status,
-          requestedDate: updatedMeeting.requestedDate,
-          requestedTime: updatedMeeting.requestedTime,
+          requested_date: updatedMeeting.requestedDate,
+          requested_time: updatedMeeting.requestedTime,
           company: updatedMeeting.company,
           notes: updatedMeeting.notes,
-          acceptedDate: updatedMeeting.acceptedDate,
-          acceptedTime: updatedMeeting.acceptedTime,
-          meetLink: updatedMeeting.meetLink,
-          adminMessage: updatedMeeting.adminMessage,
-          adminNotes: updatedMeeting.adminNotes,
-          createdAt: updatedMeeting.createdAt.toISOString()
+          accepted_date: updatedMeeting.acceptedDate,
+          accepted_time: updatedMeeting.acceptedTime,
+          meet_link: updatedMeeting.meetLink,
+          admin_message: updatedMeeting.adminMessage,
+          admin_notes: updatedMeeting.adminNotes,
+          created_at: updatedMeeting.createdAt.toISOString()
         }
       });
     } catch (error) {
@@ -522,10 +680,10 @@ export function setupRoutes(app: Express) {
           id: updatedMeeting.id,
           status: updatedMeeting.status,
           ...(action === 'accepted' ? {
-            acceptedDate: updatedMeeting.acceptedDate,
-            acceptedTime: updatedMeeting.acceptedTime,
-            meetLink: updatedMeeting.meetLink,
-            adminMessage: updatedMeeting.adminMessage
+            accepted_date: updatedMeeting.acceptedDate,
+            accepted_time: updatedMeeting.acceptedTime,
+            meet_link: updatedMeeting.meetLink,
+            admin_message: updatedMeeting.adminMessage
           } : {})
         }
       });
@@ -578,26 +736,98 @@ export function setupRoutes(app: Express) {
   });
 
   // Availability routes
-  app.post('/api/availability', (req, res) => {
-    const { date } = req.body;
-    console.log('Availability check for date:', date);
-    res.json({ 
-      date,
-      bookedSlots: ['09:00', '10:30', '14:00'],
-      availableSlots: ['09:30', '10:00', '11:00', '11:30', '13:00', '13:30', '15:00', '15:30', '16:00'],
-      totalBooked: 3,
-      totalAvailable: 9
-    });
+  app.post('/api/availability', async (req, res) => {
+    try {
+      const { date } = req.body;
+      console.log('Availability check for date:', date);
+      
+      // Get booked meetings for this date
+      const bookedMeetings = await prisma.meetingRequest.findMany({
+        where: {
+          requestedDate: date,
+          status: {
+            in: ['pending', 'accepted']
+          }
+        }
+      });
+      
+      const bookedSlots = bookedMeetings.map(meeting => meeting.requestedTime);
+      
+      // Define all available time slots
+      const availableSlots = [
+        '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00'
+      ];
+      
+      // Filter out booked slots
+      const freeSlots = availableSlots.filter(slot => !bookedSlots.includes(slot));
+      
+      res.json({ 
+        date,
+        booked_slots: bookedSlots,
+        available_slots: freeSlots,
+        total_booked: bookedSlots.length,
+        total_available: freeSlots.length
+      });
+    } catch (error) {
+      console.error('Error checking availability:', error);
+      res.status(500).json({ 
+        error: 'Availability check failed',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
   });
   
-  app.get('/api/availability/weekly', (req, res) => {
-    const { startDate, endDate } = req.query;
-    res.json({ 
-      startDate,
-      endDate,
-      availability: {},
-      summary: { totalDays: 0, totalBookedSlots: 0, averageDailyAvailability: 0 }
-    });
+  app.get('/api/availability/weekly', async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      console.log('Weekly availability check from:', startDate, 'to', endDate);
+      
+      if (!startDate || !endDate) {
+        return res.status(400).json({ 
+          error: 'Missing parameters',
+          message: 'startDate and endDate are required'
+        });
+      }
+      
+      // Get booked meetings for this date range
+      const bookedMeetings = await prisma.meetingRequest.findMany({
+        where: {
+          requestedDate: {
+            gte: startDate as string,
+            lte: endDate as string
+          },
+          status: {
+            in: ['pending', 'accepted']
+          }
+        }
+      });
+      
+      // Group booked slots by date
+      const availabilityByDate: Record<string, string[]> = {};
+      bookedMeetings.forEach(meeting => {
+        if (!availabilityByDate[meeting.requestedDate]) {
+          availabilityByDate[meeting.requestedDate] = [];
+        }
+        availabilityByDate[meeting.requestedDate].push(meeting.requestedTime);
+      });
+      
+      res.json({ 
+        startDate,
+        endDate,
+        availability: availabilityByDate,
+        summary: { 
+          totalDays: Object.keys(availabilityByDate).length, 
+          totalBookedSlots: bookedMeetings.length,
+          averageDailyAvailability: bookedMeetings.length / Math.max(1, Object.keys(availabilityByDate).length)
+        }
+      });
+    } catch (error) {
+      console.error('Error checking weekly availability:', error);
+      res.status(500).json({ 
+        error: 'Weekly availability check failed',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
   });
 
   // Visitor routes
@@ -608,6 +838,64 @@ export function setupRoutes(app: Express) {
       message: 'Visitor tracked',
       visitor: { id: 'visitor-' + Date.now(), visitorId: 'temp-visitor', visitCount: 1 }
     });
+  });
+
+  // Update visitor (including admin notes)
+  app.put('/api/visit/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { admin_notes, adminNotes } = req.body;
+      
+      // Accept either snake_case or camelCase
+      const notesValue = admin_notes || adminNotes;
+      
+      if (!notesValue && notesValue !== '') {
+        return res.status(400).json({ 
+          error: 'Validation error',
+          message: 'admin_notes field is required'
+        });
+      }
+      
+      const updatedVisitor = await prisma.visitor.update({
+        where: { id },
+        data: { adminNotes: notesValue }
+      });
+      
+      res.json({ 
+        success: true,
+        message: 'Visitor updated successfully',
+        visitor: {
+          id: updatedVisitor.id,
+          visitor_id: updatedVisitor.visitorId,
+          email: updatedVisitor.email,
+          name: updatedVisitor.name,
+          country: updatedVisitor.country,
+          browser: updatedVisitor.browser,
+          device: updatedVisitor.device,
+          os: updatedVisitor.os,
+          visitor_ip: updatedVisitor.visitorIp,
+          visit_count: updatedVisitor.visitCount,
+          admin_notes: updatedVisitor.adminNotes,
+          created_date: updatedVisitor.createdAt,
+          updated_date: updatedVisitor.updatedAt
+        }
+      });
+      
+    } catch (error) {
+      console.error('Error updating visitor:', error);
+      
+      if (error.code === 'P2025') {
+        return res.status(404).json({ 
+          error: 'Not found',
+          message: 'Visitor not found'
+        });
+      }
+      
+      res.status(500).json({ 
+        error: 'Update failed',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
   });
 
   // Admin routes - temporarily allow access without auth for testing
@@ -728,38 +1016,40 @@ export function setupRoutes(app: Express) {
       const responseData = {
         visitors: visitors.map(v => ({
           id: v.id,
-          visitorId: v.visitorId,
+          visitor_id: v.visitorId,
           country: v.country || 'Unknown',
           browser: v.browser || 'Unknown',
-          visitCount: v.visitCount,
+          visit_count: v.visitCount,
           os: v.os || 'Unknown',
           device: v.device || 'Unknown',
-          lastVisit: v.updatedAt.toISOString(),
+          last_visit: v.updatedAt.toISOString(),
+          updated_date: v.updatedAt.toISOString(),
           email: v.email || '',
           name: v.name || '',
-          visitorIp: v.visitorIp || '',
-          createdAt: v.createdAt.toISOString()
+          visitor_ip: v.visitorIp || '',
+          created_at: v.createdAt.toISOString(),
+          created_date: v.createdAt.toISOString()
         })),
         meetings: meetings.map(m => ({
           id: m.id,
-          customerName: m.customerName,
+          customer_name: m.customerName,
           email: m.email,
           company: m.company || '',
           status: m.status,
-          requestedDate: m.requestedDate,
-          requestedTime: m.requestedTime,
-          meetingTopic: m.meetingTopic,
+          requested_date: m.requestedDate,
+          requested_time: m.requestedTime,
+          meeting_topic: m.meetingTopic,
           notes: m.notes || '',
-          visitorIp: m.visitorIp || '',
+          visitor_ip: m.visitorIp || '',
           browser: m.browser || '',
           country: m.country || '',
-          createdAt: m.createdAt.toISOString(),
-          updatedAt: m.updatedAt.toISOString(),
-          acceptedDate: m.acceptedDate,
-          acceptedTime: m.acceptedTime,
-          meetLink: m.meetLink,
-          adminMessage: m.adminMessage,
-          adminNotes: m.adminNotes
+          created_at: m.createdAt.toISOString(),
+          updated_at: m.updatedAt.toISOString(),
+          accepted_date: m.acceptedDate,
+          accepted_time: m.acceptedTime,
+          meet_link: m.meetLink,
+          admin_message: m.adminMessage,
+          admin_notes: m.adminNotes
         })),
         messages: messages.map(m => ({
           id: m.id,
@@ -767,11 +1057,11 @@ export function setupRoutes(app: Express) {
           email: m.email,
           status: m.status,
           message: m.message,
-          visitorIp: m.visitorIp || '',
+          visitor_ip: m.visitorIp || '',
           browser: m.browser || '',
           country: m.country || '',
-          createdAt: m.createdAt.toISOString(),
-          updatedAt: m.updatedAt.toISOString()
+          created_at: m.createdAt.toISOString(),
+          updated_at: m.updatedAt.toISOString()
         })),
         statistics: {
           visitors: { total: totalVisitors, uniqueCountries },

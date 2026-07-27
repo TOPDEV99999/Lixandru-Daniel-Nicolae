@@ -2,11 +2,14 @@ import React, { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   Search, Download, ChevronLeft, ChevronRight, Globe, Monitor,
-  Smartphone, MapPin, Users, Clock
+  Smartphone, MapPin, Users, Clock, Edit, Save, X, MessageSquare
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/use-toast";
+import { localAPI } from "@/api/localClient";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -36,11 +39,15 @@ function exportCSV(visitors) {
   URL.revokeObjectURL(url);
 }
 
-export default function VisitorAnalytics({ visitors }) {
+export default function VisitorAnalytics({ visitors, onUpdateVisitor }) {
   const [search, setSearch] = useState("");
   const [filterBrowser, setFilterBrowser] = useState("all");
   const [filterCountry, setFilterCountry] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [editingVisitor, setEditingVisitor] = useState(null);
+  const [visitorNotes, setVisitorNotes] = useState({});
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const { toast } = useToast();
 
   const browsers = useMemo(() => [...new Set(visitors.map(v => v.browser).filter(Boolean))], [visitors]);
   const countries = useMemo(() => [...new Set(visitors.map(v => v.country).filter(Boolean))], [visitors]);
@@ -66,6 +73,44 @@ export default function VisitorAnalytics({ visitors }) {
     unique: new Set(visitors.map(v => v.visitor_ip)).size,
     countries: new Set(visitors.map(v => v.country).filter(c => c && c !== "unknown")).size,
   }), [visitors]);
+
+  const handleEditNotes = (visitor) => {
+    setEditingVisitor(visitor);
+    setVisitorNotes({
+      ...visitorNotes,
+      [visitor.id]: visitor.admin_notes || ""
+    });
+  };
+
+  const handleSaveNotes = async (visitorId) => {
+    if (!visitorId || !visitorNotes[visitorId] !== undefined) return;
+    
+    setIsSavingNotes(true);
+    try {
+      await localAPI.visitor.updateVisitor(visitorId, { admin_notes: visitorNotes[visitorId] || "" });
+      
+      // Call the callback to update parent state
+      if (onUpdateVisitor) {
+        onUpdateVisitor(visitorId, { admin_notes: visitorNotes[visitorId] });
+      }
+      
+      toast({
+        title: "Notes saved",
+        description: "Admin notes have been saved successfully."
+      });
+      
+      setEditingVisitor(null);
+    } catch (error) {
+      console.error("Error saving notes:", error);
+      toast({
+        title: "Failed to save notes",
+        description: error.message || "Please try again",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSavingNotes(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -138,11 +183,12 @@ export default function VisitorAnalytics({ visitors }) {
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">First Visit</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Last Visit</th>
                 <th className="text-center px-4 py-3 font-medium text-muted-foreground">Visits</th>
+                <th className="text-center px-4 py-3 font-medium text-muted-foreground">Admin Notes</th>
               </tr>
             </thead>
             <tbody>
               {paginated.length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">No visitors found</td></tr>
+                <tr><td colSpan={8} className="text-center py-12 text-muted-foreground">No visitors found</td></tr>
               ) : paginated.map((v, i) => {
                 const DeviceIcon = getDeviceIcon(v.device);
                 return (
@@ -170,6 +216,60 @@ export default function VisitorAnalytics({ visitors }) {
                         <Clock className="w-3 h-3" />
                         {v.visit_count || 1}
                       </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-center gap-1">
+                        {editingVisitor?.id === v.id ? (
+                          <div className="flex flex-col gap-1">
+                            <Textarea
+                              value={visitorNotes[v.id] || ""}
+                              onChange={(e) => setVisitorNotes({
+                                ...visitorNotes,
+                                [v.id]: e.target.value
+                              })}
+                              placeholder="Add admin notes..."
+                              className="min-h-[60px] text-xs w-32"
+                            />
+                            <div className="flex gap-1">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-6 text-xs"
+                                onClick={() => setEditingVisitor(null)}
+                                disabled={isSavingNotes}
+                              >
+                                <X className="w-3 h-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                className="h-6 text-xs"
+                                onClick={() => handleSaveNotes(v.id)}
+                                disabled={isSavingNotes}
+                              >
+                                <Save className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            {v.admin_notes ? (
+                              <div className="text-xs text-muted-foreground max-w-[100px] truncate" title={v.admin_notes}>
+                                <MessageSquare className="w-3 h-3 inline mr-1" />
+                                Notes
+                              </div>
+                            ) : null}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0"
+                              onClick={() => handleEditNotes(v)}
+                              title="Edit notes"
+                            >
+                              <Edit className="w-3 h-3" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

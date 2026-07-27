@@ -212,6 +212,11 @@ export const visitorAPI = {
     const response = await apiClient.delete(`/visit/${id}`);
     return response.data;
   },
+
+  updateVisitor: async (id, data) => {
+    const response = await apiClient.put(`/visit/${id}`, data);
+    return response.data;
+  },
 };
 
 // Admin API

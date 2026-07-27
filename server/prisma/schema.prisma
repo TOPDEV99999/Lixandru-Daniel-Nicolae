@@ -91,6 +91,7 @@ model Visitor {
   os         String?
   visitorIp  String?  @map("visitor_ip")
   visitCount Int      @default(1) @map("visit_count")
+  adminNotes String?  @map("admin_notes")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
   

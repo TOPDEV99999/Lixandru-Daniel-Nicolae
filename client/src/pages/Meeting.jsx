@@ -14,6 +14,7 @@ import TimeSlots, { formatTimeSlot } from "@/components/meeting/TimeSlots";
 import MeetingForm from "@/components/meeting/MeetingForm";
 
 import { resumeData } from "@/data/resume";
+import { localAPI } from "@/api/localClient";
 
 export default function Meeting() {
   const [selectedDate, setSelectedDate] = useState(null);
@@ -26,10 +27,10 @@ export default function Meeting() {
     if (!selectedDate) return;
     const checkAvailability = async () => {
       try {
-        const result = await db.functions.invoke("getAvailability", {
-          date: format(selectedDate, "yyyy-MM-dd")
-        });
-        setBookedSlots(result.data?.booked_slots || []);
+        // Use local API instead of Base44 database
+        const result = await localAPI.availability.getAvailability(format(selectedDate, "yyyy-MM-dd"));
+        // The API returns booked slots, so we need to use them
+        setBookedSlots(result.booked_slots || []);
       } catch {
         setBookedSlots([]);
       }

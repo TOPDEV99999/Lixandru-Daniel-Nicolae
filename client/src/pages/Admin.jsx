@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { Navigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, Calendar as CalendarIcon, Mail, LogOut,
-  Loader2, ArrowLeft, ShieldAlert
+  Loader2, ArrowLeft, ShieldAlert, RefreshCw
 } from "lucide-react";
 
 import VisitorAnalytics from "@/components/admin/VisitorAnalytics";
@@ -74,6 +74,13 @@ export default function Admin() {
     }));
   };
 
+  const updateVisitor = (id, updates) => {
+    setData(prev => ({
+      ...prev,
+      visitors: Array.isArray(prev?.visitors) ? prev.visitors.map(v => v?.id === id ? { ...v, ...updates } : v) : []
+    }));
+  };
+
   const deleteMessage = (id) => {
     setData(prev => ({
       ...prev,
@@ -128,6 +135,15 @@ export default function Admin() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button 
+              onClick={loadData} 
+              disabled={loadingData}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+              title="Refresh data"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loadingData ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
             <ThemeToggle />
             <Link to="/" className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
               <ArrowLeft className="w-3.5 h-3.5" />
@@ -185,7 +201,7 @@ export default function Admin() {
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
             >
-              {activeTab === "visitors" && <VisitorAnalytics visitors={data?.visitors || []} />}
+              {activeTab === "visitors" && <VisitorAnalytics visitors={data?.visitors || []} onUpdateVisitor={updateVisitor} />}
               {activeTab === "meetings" && (
                 <MeetingManagement meetings={data?.meetings || []} onUpdateMeeting={updateMeeting} />
               )}

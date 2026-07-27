@@ -70,6 +70,7 @@ export default function MeetingManagement({ meetings, onUpdateMeeting }) {
     }
     setIsResponding(true);
     try {
+      // First update the meeting status in backend
       const response = await localAPI.meeting.respondToMeeting(acceptMeeting.id, {
         action: "accepted",
         acceptedDate: acceptForm.accepted_date,
@@ -77,7 +78,43 @@ export default function MeetingManagement({ meetings, onUpdateMeeting }) {
         meetLink: acceptForm.meet_link,
         adminMessage: acceptForm.admin_message
       });
+      
       if (response.success) {
+        // Send email via FormSubmit
+        const formData = new FormData();
+        formData.append('_replyto', acceptMeeting.email);
+        formData.append('_subject', `Meeting Accepted: ${acceptMeeting.meeting_topic}`);
+        
+        // Build the email content
+        const emailContent = `Dear ${acceptMeeting.customer_name},\n\n` +
+          `Your meeting request has been accepted!\n\n` +
+          `📅 **Meeting Details:**\n` +
+          `- Date: ${acceptForm.accepted_date}\n` +
+          `- Time: ${acceptForm.accepted_time}\n` +
+          `- Topic: ${acceptMeeting.meeting_topic}\n\n`;
+        
+        if (acceptForm.meet_link) {
+          emailContent += `🔗 **Meeting Link:** ${acceptForm.meet_link}\n\n`;
+        }
+        
+        if (acceptForm.admin_message) {
+          emailContent += `💬 **Additional Message:**\n${acceptForm.admin_message}\n\n`;
+        }
+        
+        emailContent += `Please let me know if this time works for you or if you need to reschedule.\n\n` +
+          `Best regards,\n` +
+          `[Your Name]`;
+        
+        formData.append('message', emailContent);
+        
+        const formSubmitResponse = await fetch('https://formsubmit.co/ajax/uhajucewog80@gmail.com', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const formSubmitResult = await formSubmitResponse.json();
+        
+        // Update the meeting status in frontend
         onUpdateMeeting(acceptMeeting.id, { 
           status: "accepted", 
           acceptedDate: acceptForm.accepted_date,
@@ -85,16 +122,23 @@ export default function MeetingManagement({ meetings, onUpdateMeeting }) {
           meetLink: acceptForm.meet_link,
           adminMessage: acceptForm.admin_message 
         });
-        toast({
-          title: "Meeting accepted!",
-          description: response.email_sent
-            ? "Confirmation email sent to customer."
-            : "Email could not be sent automatically. See details below."
-        });
-        if (!response.email_sent && response.email_body) {
-          setAcceptMeeting({ ...acceptMeeting, emailBody: response.email_body, emailSubject: response.email_subject });
-        } else {
+        
+        if (formSubmitResponse.ok && formSubmitResult.success) {
+          toast({
+            title: "Meeting accepted!",
+            description: "Confirmation email sent to customer via FormSubmit."
+          });
           setAcceptMeeting(null);
+        } else {
+          toast({
+            title: "Meeting accepted!",
+            description: "Email could not be sent via FormSubmit. Please send manually."
+          });
+          setAcceptMeeting({ 
+            ...acceptMeeting, 
+            emailBody: emailContent, 
+            emailSubject: `Meeting Accepted: ${acceptMeeting.meeting_topic}` 
+          });
         }
       } else {
         toast({ title: response.error || "Failed to accept", variant: "destructive" });
@@ -109,18 +153,54 @@ export default function MeetingManagement({ meetings, onUpdateMeeting }) {
   const handleReject = async () => {
     setIsResponding(true);
     try {
+      // First update the meeting status in backend
       const response = await localAPI.meeting.respondToMeeting(rejectMeeting.id, {
         action: "rejected"
       });
+      
       if (response.success) {
-        onUpdateMeeting(rejectMeeting.id, { status: "rejected" });
-        toast({
-          title: "Meeting rejected",
-          description: response.email_sent
-            ? "Rejection email sent to customer."
-            : "Email could not be sent automatically."
+        // Send email via FormSubmit
+        const formData = new FormData();
+        formData.append('_replyto', rejectMeeting.email);
+        formData.append('_subject', `Meeting Request Update: ${rejectMeeting.meeting_topic}`);
+        
+        const emailContent = `Dear ${rejectMeeting.customer_name},\n\n` +
+          `Thank you for your meeting request. Unfortunately, I'm unable to schedule a meeting at this time due to scheduling constraints.\n\n` +
+          `**Meeting Topic:** ${rejectMeeting.meeting_topic}\n` +
+          `**Requested Date:** ${rejectMeeting.requested_date}\n` +
+          `**Requested Time:** ${rejectMeeting.requested_time}\n\n` +
+          `I appreciate your interest and hope we can connect in the future. Please feel free to submit another request at a later date.\n\n` +
+          `Best regards,\n` +
+          `[Your Name]`;
+        
+        formData.append('message', emailContent);
+        
+        const formSubmitResponse = await fetch('https://formsubmit.co/ajax/uhajucewog80@gmail.com', {
+          method: 'POST',
+          body: formData
         });
-        setRejectMeeting(null);
+        
+        const formSubmitResult = await formSubmitResponse.json();
+        
+        onUpdateMeeting(rejectMeeting.id, { status: "rejected" });
+        
+        if (formSubmitResponse.ok && formSubmitResult.success) {
+          toast({
+            title: "Meeting rejected",
+            description: "Rejection email sent to customer via FormSubmit."
+          });
+          setRejectMeeting(null);
+        } else {
+          toast({
+            title: "Meeting rejected",
+            description: "Email could not be sent via FormSubmit. Please send manually."
+          });
+          setRejectMeeting({ 
+            ...rejectMeeting, 
+            emailBody: emailContent, 
+            emailSubject: `Meeting Request Update: ${rejectMeeting.meeting_topic}` 
+          });
+        }
       } else {
         toast({ title: response.error || "Failed to reject", variant: "destructive" });
       }
@@ -133,7 +213,7 @@ export default function MeetingManagement({ meetings, onUpdateMeeting }) {
 
   const saveNotes = async () => {
     try {
-      await localAPI.meeting.updateMeeting(viewMeeting.id, { adminNotes: adminNotes });
+      await localAPI.meeting.updateMeeting(viewMeeting.id, { admin_notes: adminNotes });
       onUpdateMeeting(viewMeeting.id, { admin_notes: adminNotes });
       toast({ title: "Notes saved" });
       setViewMeeting(null);
