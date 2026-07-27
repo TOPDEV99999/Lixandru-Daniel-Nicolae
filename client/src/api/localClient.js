@@ -219,6 +219,24 @@ export const visitorAPI = {
   },
 };
 
+// Email API
+export const emailAPI = {
+  sendMeetingAcceptance: async (emailData) => {
+    const response = await apiClient.post('/email/send-meeting-acceptance', emailData);
+    return response.data;
+  },
+
+  sendMeetingRejection: async (emailData) => {
+    const response = await apiClient.post('/email/send-meeting-rejection', emailData);
+    return response.data;
+  },
+
+  sendContactReply: async (emailData) => {
+    const response = await apiClient.post('/email/send-contact-reply', emailData);
+    return response.data;
+  },
+};
+
 // Admin API
 export const adminAPI = {
   getAdminData: async () => {
@@ -328,6 +346,7 @@ export const localAPI = {
   admin: adminAPI,
   health: healthAPI,
   utils: apiUtils,
+  email: emailAPI,
 };
 
 // Default export for backward compatibility

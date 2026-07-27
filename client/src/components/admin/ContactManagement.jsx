@@ -101,23 +101,18 @@ export default function ContactManagement({ messages = [], onUpdateMessage, onDe
 
     setIsLoading(true);
     try {
-      // Send via FormSubmit
-      const formData = new FormData();
-      formData.append('_replyto', replyMessage.email);
-      formData.append('message', replyContent);
-      formData.append('_subject', `Re: Your message to ${replyMessage.fullName}`);
-      
-      const response = await fetch('https://formsubmit.co/ajax/uhajucewog80@gmail.com', {
-        method: 'POST',
-        body: formData
+      // Send via Resend
+      const emailResult = await localAPI.email.sendContactReply({
+        to: replyMessage.email,
+        customerName: replyMessage.fullName,
+        replyContent: replyContent,
+        originalMessage: replyMessage.message
       });
 
-      const result = await response.json();
-
-      if (response.ok && result.success) {
+      if (emailResult.success) {
         toast({ 
           title: "Reply sent!", 
-          description: "Email has been sent via FormSubmit" 
+          description: "Email has been sent via Resend" 
         });
         
         // Mark as read if it was new
@@ -131,7 +126,7 @@ export default function ContactManagement({ messages = [], onUpdateMessage, onDe
       } else {
         toast({ 
           title: "Failed to send reply", 
-          description: result.message || "Please try again", 
+          description: emailResult.error || "Please try again", 
           variant: "destructive" 
         });
       }
@@ -564,7 +559,7 @@ export default function ContactManagement({ messages = [], onUpdateMessage, onDe
                 
                 <div className="flex items-center justify-between text-sm text-muted-foreground">
                   <div>
-                    <p className="font-medium">Email will be sent via FormSubmit</p>
+                    <p className="font-medium">Email will be sent via Resend</p>
                     <p>Recipient: {replyMessage.email}</p>
                   </div>
                   <div className="text-right">

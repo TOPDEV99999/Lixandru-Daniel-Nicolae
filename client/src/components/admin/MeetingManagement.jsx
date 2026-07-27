@@ -80,39 +80,16 @@ export default function MeetingManagement({ meetings, onUpdateMeeting }) {
       });
       
       if (response.success) {
-        // Send email via FormSubmit
-        const formData = new FormData();
-        formData.append('_replyto', acceptMeeting.email);
-        formData.append('_subject', `Meeting Accepted: ${acceptMeeting.meeting_topic}`);
-        
-        // Build the email content
-        const emailContent = `Dear ${acceptMeeting.customer_name},\n\n` +
-          `Your meeting request has been accepted!\n\n` +
-          `📅 **Meeting Details:**\n` +
-          `- Date: ${acceptForm.accepted_date}\n` +
-          `- Time: ${acceptForm.accepted_time}\n` +
-          `- Topic: ${acceptMeeting.meeting_topic}\n\n`;
-        
-        if (acceptForm.meet_link) {
-          emailContent += `🔗 **Meeting Link:** ${acceptForm.meet_link}\n\n`;
-        }
-        
-        if (acceptForm.admin_message) {
-          emailContent += `💬 **Additional Message:**\n${acceptForm.admin_message}\n\n`;
-        }
-        
-        emailContent += `Please let me know if this time works for you or if you need to reschedule.\n\n` +
-          `Best regards,\n` +
-          `[Your Name]`;
-        
-        formData.append('message', emailContent);
-        
-        const formSubmitResponse = await fetch('https://formsubmit.co/ajax/uhajucewog80@gmail.com', {
-          method: 'POST',
-          body: formData
+        // Send email via Resend
+        const emailResult = await localAPI.email.sendMeetingAcceptance({
+          to: acceptMeeting.email,
+          customerName: acceptMeeting.customer_name,
+          meetingTopic: acceptMeeting.meeting_topic,
+          date: acceptForm.accepted_date,
+          time: acceptForm.accepted_time,
+          meetLink: acceptForm.meet_link,
+          adminMessage: acceptForm.admin_message
         });
-        
-        const formSubmitResult = await formSubmitResponse.json();
         
         // Update the meeting status in frontend
         onUpdateMeeting(acceptMeeting.id, { 
@@ -123,17 +100,37 @@ export default function MeetingManagement({ meetings, onUpdateMeeting }) {
           adminMessage: acceptForm.admin_message 
         });
         
-        if (formSubmitResponse.ok && formSubmitResult.success) {
+        if (emailResult.success) {
           toast({
             title: "Meeting accepted!",
-            description: "Confirmation email sent to customer via FormSubmit."
+            description: "Confirmation email sent to customer via Resend."
           });
           setAcceptMeeting(null);
         } else {
           toast({
             title: "Meeting accepted!",
-            description: "Email could not be sent via FormSubmit. Please send manually."
+            description: `Email could not be sent: ${emailResult.error}. Please send manually.`
           });
+          // Build email content for manual sending
+          let emailContent = `Dear ${acceptMeeting.customer_name},\n\n` +
+            `Your meeting request has been accepted!\n\n` +
+            `📅 **Meeting Details:**\n` +
+            `- Date: ${acceptForm.accepted_date}\n` +
+            `- Time: ${acceptForm.accepted_time}\n` +
+            `- Topic: ${acceptMeeting.meeting_topic}\n\n`;
+          
+          if (acceptForm.meet_link) {
+            emailContent += `🔗 **Meeting Link:** ${acceptForm.meet_link}\n\n`;
+          }
+          
+          if (acceptForm.admin_message) {
+            emailContent += `💬 **Additional Message:**\n${acceptForm.admin_message}\n\n`;
+          }
+          
+          emailContent += `Please let me know if this time works for you or if you need to reschedule.\n\n` +
+            `Best regards,\n` +
+            `Lixandru Daniel`;
+          
           setAcceptMeeting({ 
             ...acceptMeeting, 
             emailBody: emailContent, 
@@ -159,42 +156,38 @@ export default function MeetingManagement({ meetings, onUpdateMeeting }) {
       });
       
       if (response.success) {
-        // Send email via FormSubmit
-        const formData = new FormData();
-        formData.append('_replyto', rejectMeeting.email);
-        formData.append('_subject', `Meeting Request Update: ${rejectMeeting.meeting_topic}`);
-        
-        const emailContent = `Dear ${rejectMeeting.customer_name},\n\n` +
-          `Thank you for your meeting request. Unfortunately, I'm unable to schedule a meeting at this time due to scheduling constraints.\n\n` +
-          `**Meeting Topic:** ${rejectMeeting.meeting_topic}\n` +
-          `**Requested Date:** ${rejectMeeting.requested_date}\n` +
-          `**Requested Time:** ${rejectMeeting.requested_time}\n\n` +
-          `I appreciate your interest and hope we can connect in the future. Please feel free to submit another request at a later date.\n\n` +
-          `Best regards,\n` +
-          `[Your Name]`;
-        
-        formData.append('message', emailContent);
-        
-        const formSubmitResponse = await fetch('https://formsubmit.co/ajax/uhajucewog80@gmail.com', {
-          method: 'POST',
-          body: formData
+        // Send email via Resend
+        const emailResult = await localAPI.email.sendMeetingRejection({
+          to: rejectMeeting.email,
+          customerName: rejectMeeting.customer_name,
+          meetingTopic: rejectMeeting.meeting_topic,
+          requestedDate: rejectMeeting.requested_date,
+          requestedTime: rejectMeeting.requested_time
         });
-        
-        const formSubmitResult = await formSubmitResponse.json();
         
         onUpdateMeeting(rejectMeeting.id, { status: "rejected" });
         
-        if (formSubmitResponse.ok && formSubmitResult.success) {
+        if (emailResult.success) {
           toast({
             title: "Meeting rejected",
-            description: "Rejection email sent to customer via FormSubmit."
+            description: "Rejection email sent to customer via Resend."
           });
           setRejectMeeting(null);
         } else {
           toast({
             title: "Meeting rejected",
-            description: "Email could not be sent via FormSubmit. Please send manually."
+            description: `Email could not be sent: ${emailResult.error}. Please send manually.`
           });
+          // Build email content for manual sending
+          const emailContent = `Dear ${rejectMeeting.customer_name},\n\n` +
+            `Thank you for your meeting request. Unfortunately, I'm unable to schedule a meeting at this time due to scheduling constraints.\n\n` +
+            `**Meeting Topic:** ${rejectMeeting.meeting_topic}\n` +
+            `**Requested Date:** ${rejectMeeting.requested_date}\n` +
+            `**Requested Time:** ${rejectMeeting.requested_time}\n\n` +
+            `I appreciate your interest and hope we can connect in the future. Please feel free to submit another request at a later date.\n\n` +
+            `Best regards,\n` +
+            `Lixandru Daniel`;
+          
           setRejectMeeting({ 
             ...rejectMeeting, 
             emailBody: emailContent, 

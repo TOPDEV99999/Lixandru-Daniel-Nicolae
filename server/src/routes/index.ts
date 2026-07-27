@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { prisma } from '../lib/prisma';
 import { authMiddleware } from '../middleware/authMiddleware';
+import { EmailService } from '../services/EmailService';
 
 // Helper function to parse browser from user agent (copied from controllers)
 function parseBrowser(userAgent: string): string {
@@ -700,6 +701,140 @@ export function setupRoutes(app: Express) {
       res.status(500).json({ 
         error: 'Failed to respond to meeting request',
         message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Email endpoints using Resend API
+  app.post('/api/email/send-meeting-acceptance', authMiddleware(), async (req, res) => {
+    try {
+      const { to, customerName, meetingTopic, date, time, meetLink, adminMessage } = req.body;
+      
+      // Validate required fields
+      if (!to || !customerName || !meetingTopic || !date || !time) {
+        return res.status(400).json({ 
+          error: 'Missing required fields',
+          message: 'to, customerName, meetingTopic, date, and time are required'
+        });
+      }
+      
+      // Send email using Resend
+      const result = await EmailService.sendMeetingAcceptanceEmail(
+        to,
+        customerName,
+        meetingTopic,
+        date,
+        time,
+        meetLink,
+        adminMessage
+      );
+      
+      if (!result.success) {
+        return res.status(500).json({ 
+          success: false,
+          message: 'Failed to send email',
+          error: result.error
+        });
+      }
+      
+      res.json({ 
+        success: true,
+        message: 'Email sent successfully',
+        data: result.data
+      });
+    } catch (error) {
+      console.error('Error sending meeting acceptance email:', error);
+      res.status(500).json({ 
+        success: false,
+        message: 'Failed to send email',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.post('/api/email/send-meeting-rejection', authMiddleware(), async (req, res) => {
+    try {
+      const { to, customerName, meetingTopic, requestedDate, requestedTime } = req.body;
+      
+      // Validate required fields
+      if (!to || !customerName || !meetingTopic || !requestedDate || !requestedTime) {
+        return res.status(400).json({ 
+          error: 'Missing required fields',
+          message: 'to, customerName, meetingTopic, requestedDate, and requestedTime are required'
+        });
+      }
+      
+      // Send email using Resend
+      const result = await EmailService.sendMeetingRejectionEmail(
+        to,
+        customerName,
+        meetingTopic,
+        requestedDate,
+        requestedTime
+      );
+      
+      if (!result.success) {
+        return res.status(500).json({ 
+          success: false,
+          message: 'Failed to send email',
+          error: result.error
+        });
+      }
+      
+      res.json({ 
+        success: true,
+        message: 'Email sent successfully',
+        data: result.data
+      });
+    } catch (error) {
+      console.error('Error sending meeting rejection email:', error);
+      res.status(500).json({ 
+        success: false,
+        message: 'Failed to send email',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.post('/api/email/send-contact-reply', authMiddleware(), async (req, res) => {
+    try {
+      const { to, customerName, replyContent, originalMessage } = req.body;
+      
+      // Validate required fields
+      if (!to || !customerName || !replyContent) {
+        return res.status(400).json({ 
+          error: 'Missing required fields',
+          message: 'to, customerName, and replyContent are required'
+        });
+      }
+      
+      // Send email using Resend
+      const result = await EmailService.sendContactReplyEmail(
+        to,
+        customerName,
+        replyContent,
+        originalMessage
+      );
+      
+      if (!result.success) {
+        return res.status(500).json({ 
+          success: false,
+          message: 'Failed to send email',
+          error: result.error
+        });
+      }
+      
+      res.json({ 
+        success: true,
+        message: 'Email sent successfully',
+        data: result.data
+      });
+    } catch (error) {
+      console.error('Error sending contact reply email:', error);
+      res.status(500).json({ 
+        success: false,
+        message: 'Failed to send email',
+        error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   });
