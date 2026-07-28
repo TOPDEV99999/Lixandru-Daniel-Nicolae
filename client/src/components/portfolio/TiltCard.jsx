@@ -29,7 +29,7 @@ export default function TiltCard({ children, className = "", intensity = 8 }) {
       ref={ref}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      style={{ rotateX, rotateY, transformStyle: "preserve-3d", perspective: 1000 }}
+      style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
       className={className}
     >
       {children}

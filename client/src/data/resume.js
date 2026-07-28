@@ -183,7 +183,7 @@ export const projectsData = [
     stack: ["Shopify", "Liquid", "JavaScript", "CSS", "Payment Gateways"],
     impact: "Custom e-commerce storefront",
     github: "https://github.com/TOPDEV99999/Fashion-eCommerce-Shop-in-React.git",
-    live: "https://fashion-e-commerce-shop-in-react-three.vercel.app/"
+    live: "https://fashion-ecommerce0.netlify.app/"
   },
   {
     id: "blinkify",
@@ -203,7 +203,7 @@ export const projectsData = [
     stack: ["React", "Solidity", "Ethereum", "Web3", "Smart Contracts"],
     impact: "Blockchain asset management",
     github: "https://github.com/TOPDEV99999/Blinkify-tm.git",
-    live: "https://blink.notbyte.com/"
+    live: "https://blinkify-tm.netlify.app"
   },
   {
     id: "chatbot-health",
@@ -223,7 +223,7 @@ export const projectsData = [
     stack: ["Python", "Django", "AI", "NLP", "Healthcare"],
     impact: "Accessible AI health guidance platform",
     github: "https://github.com/TOPDEV99999/ai-healthcare-chatbot.git",
-    live: "https://childlink-ma.org/"
+    live: "https://medical-ai-agent.netlify.app"
   },
 
 ];
