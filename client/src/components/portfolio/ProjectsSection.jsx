@@ -7,34 +7,16 @@ import { projectsData } from "@/data/resume";
 import SectionHeader from "@/components/portfolio/SectionHeader";
 import TiltCard from "@/components/portfolio/TiltCard";
 
-const categories = ["All", "AI", "Web", "Shopify", "Blockchain", "WordPress", "Design", "Computer Vision"];
+const categories = ["All", "AI", "Web", "Shopify", "Blockchain", "Computer Vision"];
 
 const projectImages = {
-  dermaiq: "https://media.db.com/images/public/6a529188c8101e17e93a67f6/745bc41d2_generated_image.png",
-  faceswap: "https://media.db.com/images/public/6a529188c8101e17e93a67f6/cc09964f1_generated_image.png",
-  "mern-ecommerce": "https://media.db.com/images/public/6a529188c8101e17e93a67f6/bc162286e_generated_image.png",
-  "dating-platform": "https://media.db.com/images/public/6a529188c8101e17e93a67f6/bfb80df8c_generated_image.png",
-  "fashion-ecommerce": "https://media.db.com/images/public/6a529188c8101e17e93a67f6/d9ee1c97b_generated_image.png",
-  blinkify: "https://media.db.com/images/public/6a529188c8101e17e93a67f6/0076f58b6_generated_image.png",
-  cryptocheckmate: "https://media.db.com/images/public/6a529188c8101e17e93a67f6/b222b3509_generated_image.png",
-  "ai-nft": "https://images.unsplash.com/photo-1635322966219-b75ed372eb01?auto=format&fit=crop&w=800&q=80",
-  kogaea: "https://images.unsplash.com/photo-1614850523060-8da1d56ae167?auto=format&fit=crop&w=800&q=80",
-  topps: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=80",
-  "custom-built": "https://images.unsplash.com/photo-1587202372634-32705e3bf49c?auto=format&fit=crop&w=800&q=80",
-  sema: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80",
-  buzznerd: "https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=800&q=80",
-  neurogym: "https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=800&q=80",
-  "chatbot-health": "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=800&q=80",
-  bandieredelmondo: "https://media.db.com/images/public/6a529188c8101e17e93a67f6/b7ca04bd8_generated_image.png",
-  "ayana-bali": "https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=800&q=80",
-  "metaverse-expo": "https://media.db.com/images/public/6a529188c8101e17e93a67f6/dd76fd6ab_generated_image.png",
-  "kaho-enterprise": "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=80",
-  "brazilian-style": "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=800&q=80",
-  "club-ange": "https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&w=800&q=80",
-  "booty-fitness": "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=800&q=80",
-  "ai-crm": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80",
-  "joie-tv-tabi": "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=800&q=80",
-  "fanfan-online": "https://images.unsplash.com/photo-1557682250-33bd709cbe85?auto=format&fit=crop&w=800&q=80",
+  dermaiq: "https://picsum.photos/id/1/800/450",
+  faceswap: "https://picsum.photos/id/20/800/450",
+  "mern-ecommerce": "https://picsum.photos/id/48/800/450",
+  "dating-platform": "https://picsum.photos/id/60/800/450",
+  "fashion-ecommerce": "https://picsum.photos/id/96/800/450",
+  blinkify: "https://picsum.photos/id/119/800/450",
+  "chatbot-health": "https://picsum.photos/id/180/800/450",
 };
 
 export default function ProjectsSection() {
@@ -112,7 +94,7 @@ export default function ProjectsSection() {
                       src={projectImages[project.id]}
                       alt={`${project.title} — ${project.subtitle}`}
                       loading="lazy"
-                      className="w-full h-64 object-cover transition-transform duration-700 group-hover/img:scale-110"
+                      className="w-full h-72 object-cover transition-transform duration-700 group-hover/img:scale-110"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent pointer-events-none" />
                     <div className="absolute top-3 right-3 flex gap-1.5 flex-wrap justify-end">
@@ -127,11 +109,11 @@ export default function ProjectsSection() {
                   {/* Content */}
                   <div className="w-full md:w-1/2" style={{ transform: "translateZ(40px)" }}>
                     <div className="text-xs text-muted-foreground font-mono mb-2">{project.duration}</div>
-                    <h3 className="font-heading font-bold text-xl md:text-2xl text-foreground mb-1 tracking-tight">
+                    <h3 className="font-heading font-bold text-xl md:text-2xl text-foreground mb-2 tracking-tight">
                       {project.title}
                     </h3>
-                    <p className="text-sm text-secondary mb-4">{project.subtitle}</p>
-                    <p className="text-sm text-muted-foreground leading-[1.7] mb-4 font-medium">
+                    <p className="text-sm text-secondary mb-4 font-medium">{project.subtitle}</p>
+                    <p className="text-sm text-foreground/90 leading-relaxed mb-4">
                       {project.overview}
                     </p>
 
@@ -146,9 +128,9 @@ export default function ProjectsSection() {
                         >
                           <div className="border-t border-border pt-4 mb-4">
                             <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider mb-2">Problem</h4>
-                            <p className="text-sm text-muted-foreground mb-3">{project.problem}</p>
+                            <p className="text-sm text-foreground/90 mb-3 leading-relaxed">{project.problem}</p>
                             <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider mb-2">Solution</h4>
-                            <p className="text-sm text-muted-foreground">{project.solution}</p>
+                            <p className="text-sm text-foreground/90 leading-relaxed">{project.solution}</p>
                           </div>
                         </motion.div>
                       )}
@@ -160,6 +142,36 @@ export default function ProjectsSection() {
                           {tech}
                         </span>
                       ))}
+                    </div>
+
+                    {/* Project Links */}
+                    <div className="flex gap-3 mb-4">
+                      {project.github && (
+                        <a
+                          href={project.github}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary font-medium px-3 py-1.5 rounded-lg bg-muted hover:bg-primary/10 transition-colors"
+                        >
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd" />
+                          </svg>
+                          GitHub
+                        </a>
+                      )}
+                      {project.live && (
+                        <a
+                          href={project.live}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary font-medium px-3 py-1.5 rounded-lg bg-muted hover:bg-primary/10 transition-colors"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                          Live Demo
+                        </a>
+                      )}
                     </div>
 
                     <button

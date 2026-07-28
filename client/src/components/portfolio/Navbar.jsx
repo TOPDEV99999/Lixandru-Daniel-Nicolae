@@ -4,6 +4,7 @@ import { Menu, X, Download, Terminal, LogIn, LogOut, User } from "lucide-react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { resumeData } from "@/data/resume";
 import ThemeToggle from "@/components/portfolio/ThemeToggle";
+import NotificationBell from "@/components/portfolio/NotificationBell";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 
@@ -141,11 +142,13 @@ export default function Navbar() {
                 </Link>
               </div>
             )}
+            {user && user.email === "uhajucewog80@gmail.com" && <NotificationBell />}
             <ThemeToggle className="ml-2" />
           </div>
 
           <div className="flex md:hidden items-center gap-2">
             <ThemeToggle />
+            {user && user.email === "uhajucewog80@gmail.com" && <NotificationBell />}
             <button
               onClick={() => setMobileOpen(true)}
               className="text-foreground p-2"

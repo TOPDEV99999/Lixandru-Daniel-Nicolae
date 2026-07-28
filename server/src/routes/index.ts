@@ -284,11 +284,131 @@ export function setupRoutes(app: Express) {
     }
   });
   
-  app.put('/api/auth/profile', authMiddleware(), (req, res) => {
-    res.json({ 
-      message: 'Profile updated',
-      user: { id: 'temp-id', email: req.body.email || 'test@example.com' }
-    });
+  app.put('/api/auth/profile', authMiddleware(), async (req, res) => {
+    try {
+      const userPayload = (req as any).user;
+      const { email, name, currentPassword, newPassword } = req.body;
+      
+      if (!userPayload?.userId) {
+        return res.status(401).json({ 
+          error: 'Unauthorized',
+          message: 'User not authenticated'
+        });
+      }
+      
+      // Get user from database
+      const user = await prisma.user.findUnique({
+        where: { id: userPayload.userId }
+      });
+      
+      if (!user) {
+        return res.status(404).json({ 
+          error: 'User not found',
+          message: 'User account no longer exists'
+        });
+      }
+      
+      // If password change is requested
+      if (newPassword) {
+        if (!currentPassword) {
+          return res.status(400).json({ 
+            error: 'Validation error',
+            message: 'Current password is required to set a new password'
+          });
+        }
+        
+        // Validate current password
+        const isValidPassword = await bcrypt.compare(currentPassword, user.passwordHash);
+        if (!isValidPassword) {
+          return res.status(401).json({ 
+            error: 'Authentication failed',
+            message: 'Current password is incorrect'
+          });
+        }
+        
+        // Validate new password strength
+        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,}$/;
+        if (!passwordRegex.test(newPassword)) {
+          return res.status(400).json({ 
+            error: 'Validation error',
+            message: 'Password must be at least 8 characters long and contain at least 1 letter and 1 number'
+          });
+        }
+        
+        // Hash new password
+        const saltRounds = 10;
+        const newPasswordHash = await bcrypt.hash(newPassword, saltRounds);
+        
+        // Update user with new password
+        const updatedUser = await prisma.user.update({
+          where: { id: userPayload.userId },
+          data: {
+            ...(email && { email }),
+            ...(name && { name }),
+            passwordHash: newPasswordHash,
+            updatedAt: new Date()
+          },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            role: true,
+            createdAt: true,
+            updatedAt: true
+          }
+        });
+        
+        return res.json({ 
+          success: true,
+          message: 'Password updated successfully',
+          user: updatedUser
+        });
+      }
+      
+      // Regular profile update (without password change)
+      const updateData: any = {};
+      if (email && email !== user.email) {
+        // Check if email is already taken
+        const existingUser = await prisma.user.findUnique({
+          where: { email }
+        });
+        if (existingUser && existingUser.id !== user.id) {
+          return res.status(409).json({ 
+            error: 'Email already in use',
+            message: 'This email address is already registered to another user'
+          });
+        }
+        updateData.email = email;
+      }
+      
+      if (name) updateData.name = name;
+      updateData.updatedAt = new Date();
+      
+      const updatedUser = await prisma.user.update({
+        where: { id: userPayload.userId },
+        data: updateData,
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          createdAt: true,
+          updatedAt: true
+        }
+      });
+      
+      res.json({ 
+        success: true,
+        message: 'Profile updated successfully',
+        user: updatedUser
+      });
+    } catch (error) {
+      console.error('Profile update error:', error);
+      res.status(500).json({ 
+        error: 'Profile update failed',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
   });
 
 

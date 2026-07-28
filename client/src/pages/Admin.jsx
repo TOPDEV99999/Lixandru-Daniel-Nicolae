@@ -4,12 +4,13 @@ import { Link } from "react-router-dom";
 import { Navigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, Calendar as CalendarIcon, Mail, LogOut,
-  Loader2, ArrowLeft, ShieldAlert, RefreshCw
+  Loader2, ArrowLeft, ShieldAlert, RefreshCw, Lock
 } from "lucide-react";
 
 import VisitorAnalytics from "@/components/admin/VisitorAnalytics";
 import MeetingManagement from "@/components/admin/MeetingManagement";
 import ContactManagement from "@/components/admin/ContactManagement";
+import ChangePassword from "@/components/admin/ChangePassword";
 import ThemeToggle from "@/components/portfolio/ThemeToggle";
 import { useAuth } from "@/lib/AuthContext";
 import { localAPI } from "@/api/localClient";
@@ -18,6 +19,7 @@ const TABS = [
   { id: "visitors", label: "Visitors", icon: Users },
   { id: "meetings", label: "Meetings", icon: CalendarIcon },
   { id: "messages", label: "Messages", icon: Mail },
+  { id: "security", label: "Security", icon: Lock },
 ];
 
 export default function Admin() {
@@ -212,6 +214,7 @@ export default function Admin() {
                   onDeleteMessage={deleteMessage}
                 />
               )}
+              {activeTab === "security" && <ChangePassword />}
             </motion.div>
           </AnimatePresence>
         )}

@@ -139,23 +139,23 @@ export default function ContactSection() {
       
       if (backendResponse.data.success) {
         toast({
-          title: "Message sent successfully!",
-          description: "✅ Email sent to your Gmail via FormSubmit\n✅ Message saved to database\nI'll get back to you soon.",
+          title: "Message sent successfully! 🎉",
+          description: "Thank you for reaching out! Your message has been sent and I'll get back to you as soon as possible. Have a wonderful day!",
         });
         setFormData({ full_name: "", email: "", message: "" });
       } else {
         // Even if backend fails, email was sent successfully
         toast({ 
-          title: "Email sent but storage failed",
-          description: `✅ Email sent to your Gmail\n⚠️ Storage error: ${backendResponse.data.error || "Unknown"}`,
+          title: "Message sent! 📧",
+          description: "Your email has been sent successfully! There was a minor issue saving to our system, but I've received your message and will respond soon.",
           variant: "default"
         });
       }
     } catch (error) {
       console.error("Contact form submission error:", error);
       toast({ 
-        title: "Something went wrong", 
-        description: error.message,
+        title: "Oops! Something went wrong", 
+        description: "There was an issue sending your message. Please try again or contact me directly at uhajucewog80@gmail.com",
         variant: "destructive" 
       });
     }
