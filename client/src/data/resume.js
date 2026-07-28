@@ -123,7 +123,7 @@ export const projectsData = [
     stack: ["Python", "OpenCV", "Computer Vision", "AI", "Image Processing"],
     impact: "Real-time computer vision processing",
     github: "https://github.com/TOPDEV99999/face-swap.git",
-    live: "https://ieeexplore.ieee.org/abstract/document/9851423"
+    live: "https://face-swap-topdev.netlify.app/"
   },
   {
     id: "mern-ecommerce",
