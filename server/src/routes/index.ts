@@ -521,7 +521,7 @@ export function setupRoutes(app: Express) {
     } catch (error) {
       console.error('Error updating contact message:', error);
       
-      if (error.code === 'P2025') {
+      if (error && typeof error === 'object' && 'code' in error && (error as { code?: string }).code === 'P2025') {
         return res.status(404).json({ 
           error: 'Contact message not found',
           message: `No contact message found with ID: ${req.params.id}`
@@ -964,11 +964,14 @@ export function setupRoutes(app: Express) {
     try {
       const { id } = req.params;
       
+      // Safely extract id from params (could be string or string[])
+      const meetingId = Array.isArray(id) ? id[0] : id;
+      
       const deletedMeeting = await prisma.meetingRequest.delete({
-        where: { id }
+        where: { id: meetingId }
       });
       
-      res.json({ 
+      return res.json({ 
         success: true,
         message: 'Meeting request deleted successfully',
         meeting: deletedMeeting
@@ -976,14 +979,14 @@ export function setupRoutes(app: Express) {
     } catch (error) {
       console.error('Error deleting meeting request:', error);
       
-      if (error.code === 'P2025') {
+      if (error && typeof error === 'object' && 'code' in error && (error as { code?: string }).code === 'P2025') {
         return res.status(404).json({ 
           error: 'Meeting request not found',
           message: `No meeting request found with ID: ${req.params.id}`
         });
       }
       
-      res.status(500).json({ 
+      return res.status(500).json({ 
         error: 'Failed to delete meeting request',
         message: error instanceof Error ? error.message : 'Unknown error'
       });
@@ -1066,7 +1069,7 @@ export function setupRoutes(app: Express) {
         availabilityByDate[meeting.requestedDate].push(meeting.requestedTime);
       });
       
-      res.json({ 
+      return res.json({ 
         startDate,
         endDate,
         availability: availabilityByDate,
@@ -1078,7 +1081,7 @@ export function setupRoutes(app: Express) {
       });
     } catch (error) {
       console.error('Error checking weekly availability:', error);
-      res.status(500).json({ 
+      return res.status(500).json({ 
         error: 'Weekly availability check failed',
         message: error instanceof Error ? error.message : 'Unknown error'
       });
