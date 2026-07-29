@@ -24,6 +24,13 @@ export default function MeetingForm({ selectedDate, selectedTime, onSubmitted })
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
+  // Google Calendar booking URL (same as in GoogleCalendarBooking component)
+  const GOOGLE_CALENDAR_BOOKING_URL = "https://calendar.app.google/K9uENUFT5iNrBY7Z8";
+
+  const openGoogleCalendarBooking = () => {
+    window.open(GOOGLE_CALENDAR_BOOKING_URL, '_blank', 'noopener,noreferrer');
+  };
+
   const validate = () => {
     const errs = {};
     if (!formData.customer_name.trim()) errs.customer_name = "Name is required";
@@ -108,13 +115,36 @@ export default function MeetingForm({ selectedDate, selectedTime, onSubmitted })
       return;
     }
     if (!validate()) return;
+    
+    // Show recommendation to use Google Calendar instead
+    toast({
+      title: "⚠️ Recommendation: Use Google Calendar Booking",
+      description: "For faster confirmation and automatic scheduling, consider using Google Calendar booking instead. Would you like to proceed with this form or switch to Google Calendar?",
+      variant: "default",
+      action: (
+        <div className="flex gap-2 mt-2">
+          <Button size="sm" onClick={() => {
+            setIsSubmitting(true);
+            submitFormFallback();
+          }}>
+            Continue with Form
+          </Button>
+          <Button size="sm" variant="outline" onClick={openGoogleCalendarBooking}>
+            Use Google Calendar
+          </Button>
+        </div>
+      )
+    });
+  };
+
+  const submitFormFallback = async () => {
     setIsSubmitting(true);
     
     try {
-      console.log('Starting dual submission: Meeting Email + Backend Storage');
+      console.log('Starting fallback submission: Meeting Email via FormSubmit');
       
-      // 1. FIRST: Send meeting request email directly from frontend using FormSubmit
-      console.log('Step 1: Sending meeting request email via FormSubmit...');
+      // Send meeting request email directly from frontend using FormSubmit
+      console.log('Sending meeting request email via FormSubmit...');
       const emailResult = await sendMeetingEmailViaFormSubmit({
         customer_name: formData.customer_name,
         email: formData.email,
@@ -131,51 +161,24 @@ export default function MeetingForm({ selectedDate, selectedTime, onSubmitted })
       
       console.log('✅ Meeting request email sent successfully via FormSubmit');
       
-      // 2. SECOND: Store meeting request in backend database (existing flow)
-      console.log('Step 2: Storing meeting request in backend database...');
-      console.log('db object:', db);
-      console.log('db.functions:', db?.functions);
-      
-      // Check if db.functions.invoke exists
-      if (!db?.functions?.invoke) {
-        throw new Error('Base44 client not properly initialized. db.functions.invoke is not available.');
-      }
-      
-      console.log('Calling db.functions.invoke("submitMeeting", meetingData)...');
-      const backendResponse = await db.functions.invoke("submitMeeting", {
-        ...formData,
-        requested_date: format(selectedDate, "yyyy-MM-dd"),
-        requested_time: selectedTime
+      // Show success toast
+      toast({
+        title: "Meeting request submitted!",
+        description: "✅ Meeting request email sent via FormSubmit\nI'll review your request and get back to you shortly.",
       });
       
-      console.log('Backend API response:', backendResponse);
+      // Call the onSubmitted callback with success
+      onSubmitted({
+        ...formData,
+        requested_date: format(selectedDate, "yyyy-MM-dd"),
+        requested_time: selectedTime,
+        id: 'meeting-request-' + Date.now()
+      });
       
-      if (backendResponse.data.success) {
-        // Show success toast with both email and backend success
-        toast({
-          title: "Meeting request submitted successfully!",
-          description: "✅ Meeting request email sent to your Gmail via FormSubmit\n✅ Meeting saved to database\nI'll review your request and send a confirmation email shortly.",
-        });
-        
-        // Call the onSubmitted callback with success
-        onSubmitted({
-          ...formData,
-          requested_date: format(selectedDate, "yyyy-MM-dd"),
-          requested_time: selectedTime,
-          id: backendResponse.data.id
-        });
-      } else {
-        // Even if backend fails, email was sent successfully
-        toast({ 
-          title: "Email sent but meeting storage failed",
-          description: `✅ Meeting request email sent to your Gmail\n⚠️ Storage error: ${backendResponse.data.error || "Unknown"}`,
-          variant: "default"
-        });
-      }
     } catch (error) {
       console.error("Meeting form submission error:", error);
       toast({ 
-        title: "Something went wrong", 
+        title: "Failed to send meeting request", 
         description: error.message,
         variant: "destructive" 
       });
@@ -192,11 +195,31 @@ export default function MeetingForm({ selectedDate, selectedTime, onSubmitted })
 
   return (
     <div className="glass rounded-2xl p-6 md:p-8 border border-border">
-      <div className="flex items-center gap-2 mb-6">
-        <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-          <Send className="w-4 h-4 text-primary" />
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-9 h-9 rounded-lg bg-yellow-500/10 flex items-center justify-center">
+          <Send className="w-4 h-4 text-yellow-600" />
         </div>
-        <h3 className="font-heading font-bold text-lg text-foreground tracking-tight">Your Details</h3>
+        <div>
+          <h3 className="font-heading font-bold text-lg text-foreground tracking-tight">Meeting Request (Fallback Option)</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            For instant scheduling, use <button 
+              onClick={openGoogleCalendarBooking} 
+              className="text-primary hover:underline"
+            >
+              Google Calendar booking
+            </button> instead
+          </p>
+        </div>
+      </div>
+
+      <div className="mb-6 p-3 rounded-lg bg-yellow-500/5 border border-yellow-500/20">
+        <p className="text-sm text-yellow-700 dark:text-yellow-500 flex items-start gap-2">
+          <Clock className="w-4 h-4 mt-0.5 flex-shrink-0" />
+          <span>
+            <strong>Note:</strong> This form sends a meeting request email. For instant confirmation 
+            and automatic scheduling, use the Google Calendar booking link above.
+          </span>
+        </p>
       </div>
 
       {selectedDate && selectedTime && (

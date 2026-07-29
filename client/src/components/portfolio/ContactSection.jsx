@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
 import { resumeData } from "@/data/resume";
+import GoogleCalendarBooking from "@/components/meeting/GoogleCalendarBooking";
 
 const contactCards = [
   { icon: Linkedin, title: "LinkedIn", desc: "Let's connect", value: "daniellixandru", href: resumeData.socials.linkedin, color: "from-blue-500/20 to-blue-500/5" },
@@ -227,7 +228,7 @@ export default function ContactSection() {
           </span>
         </motion.div>
 
-        {/* Contact Form + Book a Meeting */}
+        {/* Contact Form + Google Calendar Booking */}
         <div className="grid lg:grid-cols-5 gap-6">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -324,24 +325,9 @@ export default function ContactSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.4 }}
-            className="lg:col-span-2 glass rounded-2xl p-6 md:p-8 border border-border flex flex-col justify-center"
+            className="lg:col-span-2"
           >
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-secondary/20 border border-primary/20 flex items-center justify-center mb-5">
-              <Calendar className="w-6 h-6 text-primary" />
-            </div>
-            <h3 className="font-heading font-bold text-lg text-foreground mb-2 tracking-tight">
-              Schedule a Meeting
-            </h3>
-            <p className="text-sm text-muted-foreground leading-relaxed mb-6">
-              Prefer a face-to-face conversation? Book a time slot directly on my calendar and we'll discuss your project in detail.
-            </p>
-            <Button asChild className="bg-gradient-to-r from-primary to-secondary text-primary-foreground hover:opacity-90">
-              <Link to="/meeting">
-                <Calendar className="w-4 h-4 mr-2" />
-                Book a Meeting
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Link>
-            </Button>
+            <GoogleCalendarBooking />
           </motion.div>
         </div>
       </div>

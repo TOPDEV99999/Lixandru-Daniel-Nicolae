@@ -218,6 +218,20 @@ export default function MeetingManagement({ meetings, onUpdateMeeting }) {
 
   return (
     <div className="space-y-6">
+      {/* Header Note */}
+      <div className="p-4 rounded-lg bg-blue-500/5 border border-blue-500/20">
+        <div className="flex items-start gap-2">
+          <Calendar className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+          <div>
+            <h3 className="text-sm font-medium text-foreground mb-1">Google Calendar Integration</h3>
+            <p className="text-xs text-muted-foreground">
+              Meetings are now scheduled directly via Google Calendar. This table shows meeting requests 
+              submitted through the fallback form. Google Calendar bookings are managed externally.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Filter */}
       <div className="flex items-center justify-between gap-4">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
