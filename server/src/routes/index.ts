@@ -103,7 +103,7 @@ export function setupRoutes(app: Express) {
       const accessToken = jwt.sign(userPayload, jwtSecret, { expiresIn: jwtExpiresIn as any });
       const refreshToken = jwt.sign(userPayload, jwtSecret, { expiresIn: '7d' as any });
       
-      res.status(201).json({ 
+      return res.status(201).json({ 
         message: 'Registration successful',
         user: {
           id: newUser.id,
@@ -115,7 +115,7 @@ export function setupRoutes(app: Express) {
       });
     } catch (error) {
       console.error('Registration error:', error);
-      res.status(500).json({ 
+      return res.status(500).json({ 
         error: 'Registration failed',
         message: error instanceof Error ? error.message : 'Unknown error'
       });
@@ -181,7 +181,7 @@ export function setupRoutes(app: Express) {
       const accessToken = jwt.sign(userPayload, jwtSecret, { expiresIn: jwtExpiresIn as any });
       const refreshToken = jwt.sign(userPayload, jwtSecret, { expiresIn: '7d' as any });
       
-      res.json({ 
+      return res.json({ 
         message: 'Login successful',
         user: {
           id: user.id,
@@ -193,7 +193,7 @@ export function setupRoutes(app: Express) {
       });
     } catch (error) {
       console.error('Login error:', error);
-      res.status(500).json({ 
+      return res.status(500).json({ 
         error: 'Login failed',
         message: error instanceof Error ? error.message : 'Unknown error'
       });
@@ -495,8 +495,11 @@ export function setupRoutes(app: Express) {
 
   // Contact message update (mark as read, archive, etc.)
   app.put('/api/contact/:id', authMiddleware(), async (req, res) => {
+    // Safely extract id from params (could be string or string[])
+    const { id } = req.params;
+    const contactId = Array.isArray(id) ? id[0] : id;
+    
     try {
-      const { id } = req.params;
       const { status } = req.body;
       
       // Validate status
@@ -509,11 +512,11 @@ export function setupRoutes(app: Express) {
       }
       
       const updatedMessage = await prisma.contactMessage.update({
-        where: { id },
+        where: { id: contactId },
         data: { status }
       });
       
-      res.json({ 
+      return res.json({ 
         success: true,
         message: 'Contact message updated successfully',
         contactMessage: updatedMessage
@@ -524,11 +527,11 @@ export function setupRoutes(app: Express) {
       if (error && typeof error === 'object' && 'code' in error && (error as { code?: string }).code === 'P2025') {
         return res.status(404).json({ 
           error: 'Contact message not found',
-          message: `No contact message found with ID: ${req.params.id}`
+          message: `No contact message found with ID: ${contactId}`
         });
       }
       
-      res.status(500).json({ 
+      return res.status(500).json({ 
         error: 'Failed to update contact message',
         message: error instanceof Error ? error.message : 'Unknown error'
       });
@@ -537,14 +540,17 @@ export function setupRoutes(app: Express) {
 
   // Contact message delete
   app.delete('/api/contact/:id', authMiddleware(), async (req, res) => {
+    // Safely extract id from params (could be string or string[])
+    const { id } = req.params;
+    const contactId = Array.isArray(id) ? id[0] : id;
+    
     try {
-      const { id } = req.params;
       
       const deletedMessage = await prisma.contactMessage.delete({
-        where: { id }
+        where: { id: contactId }
       });
       
-      res.json({ 
+      return res.json({ 
         success: true,
         message: 'Contact message deleted successfully',
         contactMessage: deletedMessage
@@ -552,14 +558,14 @@ export function setupRoutes(app: Express) {
     } catch (error) {
       console.error('Error deleting contact message:', error);
       
-      if (error.code === 'P2025') {
+      if (error && typeof error === 'object' && 'code' in error && (error as { code?: string }).code === 'P2025') {
         return res.status(404).json({ 
           error: 'Contact message not found',
-          message: `No contact message found with ID: ${req.params.id}`
+          message: `No contact message found with ID: ${contactId}`
         });
       }
       
-      res.status(500).json({ 
+      return res.status(500).json({ 
         error: 'Failed to delete contact message',
         message: error instanceof Error ? error.message : 'Unknown error'
       });
@@ -678,8 +684,11 @@ export function setupRoutes(app: Express) {
 
   // Meeting request update (accept/reject/complete, update admin notes)
   app.put('/api/meeting/:id', authMiddleware(), async (req, res) => {
+    // Safely extract id from params (could be string or string[])
+    const { id } = req.params;
+    const meetingId = Array.isArray(id) ? id[0] : id;
+    
     try {
-      const { id } = req.params;
       const { 
         status, 
         acceptedDate, 
@@ -961,11 +970,11 @@ export function setupRoutes(app: Express) {
 
   // Meeting request delete
   app.delete('/api/meeting/:id', authMiddleware(), async (req, res) => {
+    // Safely extract id from params (could be string or string[])
+    const { id } = req.params;
+    const meetingId = Array.isArray(id) ? id[0] : id;
+    
     try {
-      const { id } = req.params;
-      
-      // Safely extract id from params (could be string or string[])
-      const meetingId = Array.isArray(id) ? id[0] : id;
       
       const deletedMeeting = await prisma.meetingRequest.delete({
         where: { id: meetingId }
@@ -982,7 +991,7 @@ export function setupRoutes(app: Express) {
       if (error && typeof error === 'object' && 'code' in error && (error as { code?: string }).code === 'P2025') {
         return res.status(404).json({ 
           error: 'Meeting request not found',
-          message: `No meeting request found with ID: ${req.params.id}`
+          message: `No meeting request found with ID: ${meetingId}`
         });
       }
       
@@ -1091,7 +1100,7 @@ export function setupRoutes(app: Express) {
   // Visitor routes
   app.post('/api/visit', (_req, res) => {
     console.log('Visitor tracked');
-    res.status(201).json({ 
+    return res.status(201).json({ 
       success: true,
       message: 'Visitor tracked',
       visitor: { id: 'visitor-' + Date.now(), visitorId: 'temp-visitor', visitCount: 1 }
@@ -1142,14 +1151,14 @@ export function setupRoutes(app: Express) {
     } catch (error) {
       console.error('Error updating visitor:', error);
       
-      if (error.code === 'P2025') {
+      if (error && typeof error === 'object' && 'code' in error && (error as { code?: string }).code === 'P2025') {
         return res.status(404).json({ 
           error: 'Not found',
           message: 'Visitor not found'
         });
       }
       
-      res.status(500).json({ 
+      return res.status(500).json({ 
         error: 'Update failed',
         message: error instanceof Error ? error.message : 'Unknown error'
       });

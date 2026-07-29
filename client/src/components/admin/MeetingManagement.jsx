@@ -216,14 +216,112 @@ export default function MeetingManagement({ meetings, onUpdateMeeting }) {
     }
   };
 
+  // Nova Assistant state
+  const [novaOpen, setNovaOpen] = useState(false);
+  const [novaMessages, setNovaMessages] = useState([
+    { id: 1, role: 'assistant', content: 'Hello! I\'m Nova, your AI meeting assistant. I can help you manage meeting requests, suggest responses, and analyze meeting patterns.' }
+  ]);
+  const [novaInput, setNovaInput] = useState('');
+
+  const handleNovaSend = () => {
+    if (!novaInput.trim()) return;
+    
+    // Add user message
+    const userMessage = { id: Date.now(), role: 'user', content: novaInput };
+    setNovaMessages(prev => [...prev, userMessage]);
+    
+    // Simulate AI response (in a real app, this would call an API)
+    setTimeout(() => {
+      const responses = [
+        `I can see you have ${filtered.length} meeting request(s). ${filtered.filter(m => m.status === 'pending').length} are pending review.`,
+        'For pending meetings, I suggest reviewing them today. Would you like me to draft acceptance emails?',
+        'I notice some meetings are scheduled during peak hours. Consider suggesting alternative times for better availability.',
+        'Based on your meeting patterns, most requests come from tech companies. You might want to create template responses for common topics.',
+        'I can help you generate professional responses to meeting requests. Just tell me which meeting you\'d like to respond to.'
+      ];
+      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+      const assistantMessage = { id: Date.now() + 1, role: 'assistant', content: randomResponse };
+      setNovaMessages(prev => [...prev, assistantMessage]);
+    }, 1000);
+    
+    setNovaInput('');
+  };
+
   return (
     <div className="space-y-6">
+      {/* Nova Assistant Dialog */}
+      <Dialog open={novaOpen} onOpenChange={setNovaOpen}>
+        <DialogContent className="max-w-2xl h-[600px] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
+              Nova Assistant
+              <Badge variant="outline" className="ml-auto text-xs">AI-Powered</Badge>
+            </DialogTitle>
+            <DialogDescription>
+              Your AI meeting management assistant
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden flex flex-col">
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {novaMessages.map((msg) => (
+                <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[80%] rounded-lg p-3 ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                    <p className="text-sm">{msg.content}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            {/* Input */}
+            <div className="border-t p-4">
+              <div className="flex gap-2">
+                <Input
+                  value={novaInput}
+                  onChange={(e) => setNovaInput(e.target.value)}
+                  placeholder="Ask Nova about meetings, scheduling, or responses..."
+                  className="flex-1"
+                  onKeyDown={(e) => e.key === 'Enter' && handleNovaSend()}
+                />
+                <Button onClick={handleNovaSend}>Send</Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Try: "Help me draft an acceptance email" or "Analyze meeting patterns"
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Header Note */}
       <div className="p-4 rounded-lg bg-blue-500/5 border border-blue-500/20">
         <div className="flex items-start gap-2">
-          <Calendar className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-          <div>
-            <h3 className="text-sm font-medium text-foreground mb-1">Google Calendar Integration</h3>
+          <CalendarIcon className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+          <div className="flex-1">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-sm font-medium text-foreground">Google Calendar Integration</h3>
+              <div className="flex items-center gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="text-xs"
+                  onClick={() => setNovaOpen(true)}
+                >
+                  <MessageSquare className="w-3 h-3 mr-1" />
+                  Nova Assistant
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="text-xs"
+                  onClick={() => window.open('https://calendar.app.google/K9uENUFT5iNrBY7Z8', '_blank', 'noopener,noreferrer')}
+                >
+                  <CalendarIcon className="w-3 h-3 mr-1" />
+                  Open Google Calendar
+                </Button>
+              </div>
+            </div>
             <p className="text-xs text-muted-foreground">
               Meetings are now scheduled directly via Google Calendar. This table shows meeting requests 
               submitted through the fallback form. Google Calendar bookings are managed externally.
