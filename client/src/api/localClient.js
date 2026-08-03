@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Base URL for API requests
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://obituaries-primary-strategies-heaven.trycloudflare.com/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://technician-pays-firefox-restaurants.trycloudflare.com/api';
 
 console.log('API Base URL:', API_BASE_URL);
 

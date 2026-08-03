@@ -7,7 +7,7 @@ export const resumeData = {
   phone: "+40756216117",
   location: "Bucharest, Romania",
   summary: "Full-Stack Software Engineer with 8+ years of experience building scalable web applications using React, Next.js, Node.js, Python, TypeScript, PHP, Shopify, WooCommerce, AI, and Web3 technologies. Passionate about developing secure, high-performance software with clean architecture, modern development practices, and a focus on delivering business value.",
-  resumeUrl: "https://obituaries-primary-strategies-heaven.trycloudflare.com/api/resume",
+  resumeUrl: "https://technician-pays-firefox-restaurants.trycloudflare.com/api/resume",
   socials: {
     github: "https://github.com/TOPDEV99999",
     linkedin: "https://linkedin.com/in/daniellixandru",
